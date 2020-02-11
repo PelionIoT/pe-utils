@@ -19,7 +19,7 @@ WIGWAG_ROOT=${1:-"/wigwag"}
 EDGE_CORE_PORT=${2:-9101}
 IDENTITY_DIR=${3:-/userdata/edge_gw_config}
 SCRIPT_DIR="$WIGWAG_ROOT/wwrelay-utils/debug_scripts"
-PATH=$SCRIPT_DIR/get_new_gw_identity/developer_gateway_identity/bin:$NODE_PATH/developer_identity/bin:$PATH
+PATH=$NODE_PATH/developer_identity/bin:$PATH
 
 getEdgeStatus() {
   tmpfile=$(mktemp)
