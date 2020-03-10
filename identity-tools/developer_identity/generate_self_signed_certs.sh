@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cert_dir=${1:-temp_certs}
+cert_dir=${1:-$(mktemp -d)}
 
 cleanup () {
 	rm -rf ${cert_dir}
@@ -45,7 +45,7 @@ _createDevicePrivateKey() {
 }
 
 _createDeviceCertificate() {
-	(echo '[ req ]'; echo 'distinguished_name=dn'; echo 'prompt = no'; echo '[ dn ]'; echo 'C=US'; echo 'ST=Texas';echo 'L=Austin';echo 'O=ARM';echo "OU=$OU";echo "CN=$internalid";) > ${cert_dir}/device.cnf
+	(echo '[ req ]'; echo 'distinguished_name=dn'; echo 'prompt = no'; echo '[ dn ]'; echo 'C=US'; echo 'ST=Texas';echo 'L=Austin';echo 'O=ARM';echo "OU=$ACCOUNT_ID";echo "CN=$DEVICE_ID";) > ${cert_dir}/device.cnf
 	openssl req -key ${cert_dir}/device_private_key.pem -new -sha256 -out ${cert_dir}/device_csr.pem -config ${cert_dir}/device.cnf
 	openssl x509 -sha256 -req -in ${cert_dir}/device_csr.pem -out ${cert_dir}/device_cert.pem -CA ${cert_dir}/intermediate_cert.pem -CAkey ${cert_dir}/intermediate_key.pem -days 7300 -extensions ext -CAcreateserial
 }
