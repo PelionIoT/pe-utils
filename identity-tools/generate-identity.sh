@@ -15,46 +15,61 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-WIGWAG_ROOT=${1:-"/wigwag"}
-EDGE_CORE_PORT=${2:-9101}
-IDENTITY_DIR=${3:-/userdata/edge_gw_config}
-SCRIPT_DIR="$WIGWAG_ROOT/wwrelay-utils/debug_scripts"
-PATH=$NODE_PATH/developer_identity/bin:$PATH
+set -e
 
-getEdgeStatus() {
-  tmpfile=$(mktemp)
-  curl localhost:${EDGE_CORE_PORT}/status > $tmpfile
-  status=$(jq -r .status $tmpfile)
-  internalid=$(jq -r .['"internal-id"'] $tmpfile)
-  lwm2mserveruri=$(jq -r .['"lwm2m-server-uri"'] $tmpfile)
-  OU=$(jq -r .['"account-id"'] $tmpfile)
+EDGE_CORE_PORT=${1:-9101}
+IDENTITY_DIR=${2:-./}
+
+function jsonValue() {
+    KEY=$2
+    IFS='{",}'
+    read -ra ARR <<< "$1"
+    for ((i = 0; i < ${#ARR[@]}; ++i)); do
+        if [ "${ARR[$i]}" == "$KEY" ]; then
+            position=$(( $i + 2 ))
+            echo "${ARR[$position]}"
+        fi
+    done
 }
 
-readEeprom() {
-  deviceID=$(jq -r .deviceID ${IDENTITY_DIR}/identity.json)
+getEdgeStatus() {
+    edge_status=$(curl localhost:${EDGE_CORE_PORT}/status)
+    OU=$(jsonValue $edge_status account-id)
+    internalid=$(jsonValue $edge_status internal-id)
+    lwm2mserveruri=$(jsonValue $edge_status lwm2m-server-uri)
+    status=$(jsonValue $edge_status status)
+}
+
+readIdentity() {
+    if [ -f "${IDENTITY_DIR}/identity.json" ]; then
+        identity=$(cat ${IDENTITY_DIR}/identity.json)
+        deviceID=$(jsonValue "$identity" deviceID)
+    fi
 }
 
 execute () {
-  if [ "x$status" = "xconnected" ]; then
-    echo "Edge-core is connected..."
-    readEeprom
-    if [ ! -f ${IDENTITY_DIR}/identity.json -o  "x$internalid" != "x$deviceID"  ]; then
-      echo "Creating developer self-signed certificate."
-      mkdir -p ${IDENTITY_DIR}
-      if [ -f ${IDENTITY_DIR}/identity.json ] ; then
-        cp ${IDENTITY_DIR}/identity.json ${IDENTITY_DIR}/identity_original.json
-      fi
-      create-dev-identity\
-        -g $lwm2mserveruri\
-        -p DEV0\
-        -o $OU\
-        --temp-cert-dir $(mktemp -d)\
-        --identity-dir ${IDENTITY_DIR}\
-        --internal-id $internalid
+    if [ "x$status" = "xconnected" ]; then
+        echo "Edge-core is connected..."
+        readIdentity
+        if [ ! -f ${IDENTITY_DIR}/identity.json -o  "x$internalid" != "x$deviceID"  ]; then
+            echo "Creating developer identity."
+            mkdir -p ${IDENTITY_DIR}
+            if [ -f ${IDENTITY_DIR}/identity.json ] ; then
+                cp ${IDENTITY_DIR}/identity.json ${IDENTITY_DIR}/identity_original.json
+            fi
+            IFS='.' read -ra ADDR <<< "$lwm2mserveruri"
+            ./developer_identity/create-dev-identity.sh\
+                -d \
+                -m ${ADDR[2]}\
+                -p DEV0\
+                -n $OU\
+                -o ${IDENTITY_DIR}\
+                -i $internalid
+        fi
+    else
+        echo "Error: edge-core is not connected yet. Its status is- $status. Exited with code $?."
+        exit 1
     fi
-  else
-    echo "Error: edge-core is not connected yet. Its status is- $status. Exited with code $?."
-  fi
 }
 
 getEdgeStatus

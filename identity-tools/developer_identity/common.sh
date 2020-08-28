@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# Copyright (c) 2018, Arm Limited and affiliates.
+# Copyright (c) 2019, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,20 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SELF=$( dirname "${BASH_SOURCE[0]}" )
+#!/bin/bash
 
-if [ -z "$NODE_EXEC" ]; then NODE_EXEC="node"; fi
-command -v $NODE_EXEC > /dev/null
-status=$?
-if [ $status -ne 0 ]; then
-  NODE_EXEC="nodejs"
-  echo "No \"node\" exec found. Trying \"$NODE_EXEC\""
-  command -v $NODE_EXEC > /dev/null
-  status=$?
-  if [ $status -ne 0 ]; then
-    echo "Is node.js installed or in path?"
-    exit 1
-  fi
-fi
+cli_log() {
+	script_name=${0##*/}
+	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	echo "$timestamp $script_name LOG $1"
+}
 
-$NODE_EXEC $SELF/../index.js $@ --script-dir $SELF/..
+cli_error() {
+	script_name=${0##*/}
+	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	echo "$timestamp $script_name ERROR $1"
+}
+
+cli_warn() {
+	script_name=${0##*/}
+	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	echo "$timestamp $script_name WARN $1"
+}
+
+cli_debug() {
+	if [ ! -z $VERBOSE ]; then
+		script_name=${0##*/}
+		timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+		echo "$timestamp $script_name DEBUG $1"
+	fi
+}

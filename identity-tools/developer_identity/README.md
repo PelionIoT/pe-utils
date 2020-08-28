@@ -1,12 +1,7 @@
-## Developer Edge Provisioning Tool
-A tool to generate developer identity for the edge gateway solution
-
-### Install
-```
-npm install
-```
+## Create developer identity
+A tool to generate developer identity for Pelion Edge
 
 ### Run
 ```
-./bin/create-dev-identity
+./create-dev-identity.sh --help
 ```
