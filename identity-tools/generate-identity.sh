@@ -33,7 +33,7 @@ function jsonValue() {
 }
 
 getEdgeStatus() {
-    edge_status=$(curl localhost:${EDGE_CORE_PORT}/status)
+    edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
     OU=$(jsonValue $edge_status account-id)
     internalid=$(jsonValue $edge_status internal-id)
     lwm2mserveruri=$(jsonValue $edge_status lwm2m-server-uri)
