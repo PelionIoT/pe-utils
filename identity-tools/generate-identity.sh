@@ -19,6 +19,7 @@ set -e
 
 EDGE_CORE_PORT=${1:-9101}
 IDENTITY_DIR=${2:-./}
+CURR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 function jsonValue() {
     KEY=$2
@@ -58,7 +59,7 @@ execute () {
                 cp ${IDENTITY_DIR}/identity.json ${IDENTITY_DIR}/identity_original.json
             fi
             IFS='.' read -ra ADDR <<< "$lwm2mserveruri"
-            ./developer_identity/create-dev-identity.sh\
+            $CURR_DIR/developer_identity/create-dev-identity.sh\
                 -d \
                 -z ${ADDR[${#ADDR[@]} - 3]}\
                 -m ${ADDR[${#ADDR[@]} - 2]}\
