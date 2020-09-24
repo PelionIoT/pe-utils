@@ -73,7 +73,7 @@ cli_help() {
 
 OPTIND=1
 
-while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:' opt; do
+while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:z:' opt; do
     case "$opt" in
         h|-help)
             cli_help
