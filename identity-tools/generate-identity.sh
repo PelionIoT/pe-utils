@@ -60,7 +60,8 @@ execute () {
             IFS='.' read -ra ADDR <<< "$lwm2mserveruri"
             ./developer_identity/create-dev-identity.sh\
                 -d \
-                -m ${ADDR[2]}\
+                -z ${ADDR[${#ADDR[@]} - 3]}\
+                -m ${ADDR[${#ADDR[@]} - 2]}\
                 -p DEV0\
                 -n $OU\
                 -o ${IDENTITY_DIR}\
