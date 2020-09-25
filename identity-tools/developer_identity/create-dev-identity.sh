@@ -34,10 +34,9 @@ cli_help() {
     -V                            output the version number
     -d                            generate identity using default values
     -m <lab_instance>             one of the following mbed-cloud lab instance (default: 'mbedcloud') -
-                                  [ mds-integration-lab OR mbedcloudintegration,
-                                    mds-systemtest OR mbedcloudstaging,
-                                    mbedcloud OR us-east-1.mbedcloud,
-                                    ap-northeast-1.mbedcloud ]
+                                  [ mbedcloudintegration,
+                                    mbedcloudstaging,
+                                    mbedcloud ]
     -c <lwm2m_coap_url>           lwm2m coap server address (default: 'coaps://lwm2m.us-east-1.mbedcloud.com')
     -g <gw_server_url>            gateway services api address (default: 'https://gateways.us-east-1.mbedcloud.com')
     -s <api_server_url>           api server address (default: 'https://api.us-east-1.mbedcloud.com')
@@ -51,6 +50,7 @@ cli_help() {
     -r <radio_config>             radio configuration of the gateway, refer configurations section in
                                   $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: '00')
     -l <led_config>               status led configuration of the gateway (default: '01')
+    -z <prod_region>              production cloud region
 
   Examples:
 
@@ -73,7 +73,7 @@ cli_help() {
 
 OPTIND=1
 
-while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:' opt; do
+while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:z:' opt; do
     case "$opt" in
         h|-help)
             cli_help
@@ -88,7 +88,8 @@ while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:' opt; do
             ;;
         d)
             USE_DEFAULT=1
-            CLOUD_LAB="us-east-1.mbedcloud"
+            CLOUD_LAB="mbedcloud"
+            CLOUD_LAB_REGION="us-east-1"
             SERIAL_NUMBER_PREFIX="DEV0"
             RADIO_CONFIG="00"
             HW_VERSION="rpi3bplus"
@@ -102,29 +103,23 @@ while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:' opt; do
         m)
             CLOUD_LAB="$OPTARG"
             case "$CLOUD_LAB" in
-                mds-integration-lab|mbedcloudintegration)
-                    LwM2M_URL="coaps://mds-integration-lab.dev.mbed.com"
+                mbedcloudintegration)
+                    LwM2M_URL="coaps://lwm2m-integration-lab.mbedcloudintegration.net"
                     API_URL="https://lab-api.mbedcloudintegration.net"
                     GW_URL="https://gateways.mbedcloudintegration.net"
                     k8s_URL="https://edge-k8s.mbedcloudintegration.net"
                     ;;
-                mds-systemtest|mbedcloudstaging)
-                    LwM2M_URL="coaps://mds-systemtest.dev.mbed.com"
+                mbedcloudstaging)
+                    LwM2M_URL="coaps://lwm2m-os2.mbedcloudstaging.net"
                     API_URL="https://api-os2.mbedcloudstaging.net"
                     GW_URL="https://gateways.mbedcloudstaging.net"
                     k8s_URL="https://edge-k8s.mbedcloudstaging.net"
                     ;;
-                mbedcloud|us-east-1.mbedcloud)
-                    LwM2M_URL="coaps://lwm2m.us-east-1.mbedcloud.com"
-                    API_URL="https://api.us-east-1.mbedcloud.com"
-                    GW_URL="https://gateways.us-east-1.mbedcloud.com"
-                    k8s_URL="https://edge-k8s.us-east-1.mbedcloud.com"
-                    ;;
-                ap-northeast-1.mbedcloud)
-                    LwM2M_URL="coaps://lwm2m.ap-northeast-1.mbedcloud.com"
-                    API_URL="https://api.ap-northeast-1.mbedcloud.com"
-                    GW_URL="https://gateways.ap-northeast-1.mbedcloud.com"
-                    k8s_URL="https://edge-k8s.ap-northeast-1.mbedcloud.com"
+                mbedcloud)
+                    LwM2M_URL="coaps://lwm2m.$PROD_REGION.mbedcloud.com"
+                    API_URL="https://api.$PROD_REGION.mbedcloud.com"
+                    GW_URL="https://gateways.$PROD_REGION.mbedcloud.com"
+                    k8s_URL="https://edge-k8s.$PROD_REGION.mbedcloud.com"
                     ;;
                 *)
                     cli_error "Unknown mbed-cloud lab instance - $CLOUD_LAB. Check help for expected values."
@@ -164,6 +159,9 @@ while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:' opt; do
             ;;
         l)
             LED_CONFIG="$OPTARG"
+            ;;
+        z)
+            PROD_REGION="$OPTARG"
             ;;
         *)
             cli_help
