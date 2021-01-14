@@ -19,6 +19,7 @@ set -e
 
 EDGE_CORE_PORT=${1:-9101}
 IDENTITY_DIR=${2:-./}
+edge_status=$3
 CURR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 function jsonValue() {
@@ -34,7 +35,7 @@ function jsonValue() {
 }
 
 getEdgeStatus() {
-    edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
+    [[ -z "$edge_status" ]] && edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
     OU=$(jsonValue $edge_status account-id)
     internalid=$(jsonValue $edge_status internal-id)
     lwm2mserveruri=$(jsonValue $edge_status lwm2m-server-uri)
