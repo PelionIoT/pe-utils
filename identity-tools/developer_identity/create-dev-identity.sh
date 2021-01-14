@@ -190,17 +190,6 @@ if [ -z "$DEVICE_ID" ]; then
     DEVICE_ID="$(generate_random_hex_number 32)"
 fi
 
-cli_debug "Creating developer self-signed certificate."
-tmpdir=$(mktemp -d)
-. "$DEVID_CLI_DIR/generate_self_signed_certs.sh" $tmpdir
-
-if [ $? -ne 0 ]; then
-    cli_error "Failed to generate self signed certs!"
-    exit 1
-fi
-
-cli_debug "Successfully generated self-signed certs at $tmpdir"
-
 MAC_INDEX_3="$((1 + RANDOM % 250))"
 MAC_INDEX_4="$((1 + RANDOM % 250))"
 MAC_INDEX_5="$((1 + RANDOM % 250))"
@@ -233,21 +222,7 @@ echo "{
     ],
     \"gatewayServicesAddress\": \"$GW_URL\",
     \"edgek8sServicesAddress\": \"$k8s_URL\",
-    \"cloudAddress\": \"$API_URL\",
-    \"ssl\": {
-        \"client\": {
-            \"key\": \"$(echo $(cat $tmpdir/device_private_key.pem | awk '{print}' ORS='\\n'))\",
-            \"certificate\": \"$(echo $(cat $tmpdir/device_cert.pem | awk '{print}' ORS='\\n'))\"
-        },
-        \"server\": {
-            \"key\": \"$(echo $(cat $tmpdir/device_private_key.pem | awk '{print}' ORS='\\n'))\",
-            \"certificate\": \"$(echo $(cat $tmpdir/device_cert.pem | awk '{print}' ORS='\\n'))\"
-        },
-        \"ca\": {
-            \"ca\": \"$(echo $(cat $tmpdir/root_cert.pem | awk '{print}' ORS='\\n'))\",
-            \"intermediate\": \"$(echo $(cat $tmpdir/intermediate_cert.pem | awk '{print}' ORS='\\n'))\"
-        }
-    }
+    \"cloudAddress\": \"$API_URL\"
 }" > $OUTPUT_DIR/identity.json
 
 cli_debug "$(cat $OUTPUT_DIR/identity.json)"
