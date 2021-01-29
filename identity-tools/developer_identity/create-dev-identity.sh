@@ -41,7 +41,7 @@ cli_help() {
     -g <gw_server_url>            gateway services api address (default: 'https://gateways.us-east-1.mbedcloud.com')
     -s <api_server_url>           api server address (default: 'https://api.us-east-1.mbedcloud.com')
     -k <k8s_server_url>.          edge kubernetes server address (default: 'https://edge-k8s.us-east-1.mbedcloud.com')
-    -p <serial_number_prefix>     serial number prefix (default: 'DEV0')
+    -e <serial_number>            [optional] gateway serial number (default: autogenerate a random serial number)
     -n <account_id>               account identifier (mandatory)
     -o <output_directory>         output directory of identity.json (default: './')
     -i <device_id>                edge-core's internal-id (mandatory)
@@ -73,7 +73,7 @@ cli_help() {
 
 OPTIND=1
 
-while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:z:' opt; do
+while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
     case "$opt" in
         h|-help)
             cli_help
@@ -90,7 +90,6 @@ while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:z:' opt; do
             USE_DEFAULT=1
             CLOUD_LAB="mbedcloud"
             CLOUD_LAB_REGION="us-east-1"
-            SERIAL_NUMBER_PREFIX="DEV0"
             RADIO_CONFIG="00"
             HW_VERSION="rpi3bplus"
             LED_CONFIG="01"
@@ -139,8 +138,8 @@ while getopts 'hvVdm:c:g:s:k:p:n:o:i:w:r:l:z:' opt; do
         k)
             k8s_URL="$OPTARG"
             ;;
-        p)
-            SERIAL_NUMBER_PREFIX="$OPTARG"
+        e)
+            SERIAL_NUMBER="$OPTARG"
             ;;
         n)
             ACCOUNT_ID="$OPTARG"
@@ -178,8 +177,6 @@ generate_random_hex_number() {
     echo "$hex_rand"
 }
 
-SN_POSTFIX="$(generate_random_hex_number 6)"
-
 if [ -z "$ACCOUNT_ID" ]; then
     cli_warn "-n <account_id> not specified! generating random uuid..."
     ACCOUNT_ID="$(generate_random_hex_number 32)"
@@ -194,8 +191,14 @@ MAC_INDEX_3="$((1 + RANDOM % 250))"
 MAC_INDEX_4="$((1 + RANDOM % 250))"
 MAC_INDEX_5="$((1 + RANDOM % 250))"
 
+SERIAL_NUMBER_PREFIX="DEV0"
+SN_POSTFIX="$(generate_random_hex_number 6)"
+DEV_SERIAL_NUMBER=$SERIAL_NUMBER_PREFIX$SN_POSTFIX
+
+[ -z $SERIAL_NUMBER ] && SERIAL_NUMBER=$DEV_SERIAL_NUMBER
+
 echo "{
-    \"serialNumber\": \"$SERIAL_NUMBER_PREFIX$SN_POSTFIX\",
+    \"serialNumber\": \"$SERIAL_NUMBER\",
     \"OU\": \"$ACCOUNT_ID\",
     \"deviceID\": \"$DEVICE_ID\",
     \"hardwareVersion\": \"$HW_VERSION\",
