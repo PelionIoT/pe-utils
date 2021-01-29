@@ -36,16 +36,17 @@ function jsonValue() {
 
 getEdgeStatus() {
     [[ -z "$edge_status" ]] && edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
-    OU=$(jsonValue $edge_status account-id)
-    internalid=$(jsonValue $edge_status internal-id)
-    lwm2mserveruri=$(jsonValue $edge_status lwm2m-server-uri)
-    status=$(jsonValue $edge_status status)
+    OU=`echo $edge_status | jq -r '."account-id"'`
+    internalid=`echo $edge_status | jq -r '."internal-id"'`
+    lwm2mserveruri=`echo $edge_status | jq -r '."lwm2m-server-uri"'`
+    status=`echo $edge_status | jq -r .status`
+    endpointname=`echo $edge_status | jq -r '."endpoint-name"'`
 }
 
 readIdentity() {
     if [ -f "${IDENTITY_DIR}/identity.json" ]; then
         identity=$(cat ${IDENTITY_DIR}/identity.json)
-        deviceID=$(jsonValue "$identity" deviceID)
+        deviceID=`echo $identity | jq -r .deviceID`
     fi
 }
 
@@ -64,10 +65,12 @@ execute () {
                 -d \
                 -z ${ADDR[${#ADDR[@]} - 3]}\
                 -m ${ADDR[${#ADDR[@]} - 2]}\
-                -p DEV0\
+                -e $endpointname\
                 -n $OU\
                 -o ${IDENTITY_DIR}\
                 -i $internalid
+        else
+            echo "Success: Generated identity is same as reported by edge-core."
         fi
     else
         echo "Error: edge-core is not connected yet. Its status is- $status. Exited with code $?."
