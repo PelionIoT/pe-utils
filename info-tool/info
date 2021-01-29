@@ -64,14 +64,8 @@ load_statistics(){
 		_check_stat_var_set "$gatewayServicesAddress"
 		_check_stat_var_set "$edgek8sServicesAddress"
 		_check_stat_var_set "$cloudAddress"
-		_check_stat_var_set "$ssl_client_key"
-		_check_stat_var_set "$ssl_client_certificate"
-		_check_stat_var_set "$ssl_server_key"
-		_check_stat_var_set "$åssl_server_certificate"
-		_check_stat_var_set "$ssl_ca_ca"
-		_check_stat_var_set "$ssl_ca_intermediate"
 		if [[ $_check_stat_var_set_error -ne 0 ]]; then
-			echo "error found, relaoding"
+			echo "Stats out of sync, relaoding..."
 			rm -rf /wigwag/system/lib/bash/relaystatics.sh
 			if [[ -e /userdata/edge_gw_config/identity.json ]]; then
 				/wigwag/system/bin/json2sh /userdata/edge_gw_config/identity.json /wigwag/system/lib/bash/relaystatics.sh
