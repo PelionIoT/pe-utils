@@ -17,12 +17,99 @@
 
 #https://github.com/longsleep/build-pine64-image/blob/master/simpleimage/platform-scripts/pine64_health.sh
 #---------------Configuration-------------#
-source common.sh nofunc
-
+#source common.sh nofunc
+NORM="$(tput sgr0)"
+BOLD="$(tput bold)"
+REV="$(tput smso)"
+UND="$(tput smul)"
+BLACK="$(tput setaf 0)"
+RED="$(tput setaf 1)"
+GREEN="$(tput setaf 2)"
+YELLOW="$(tput setaf 3)"
+BLUE="$(tput setaf 4)"
+MAGENTA="$(tput setaf 5)"
+CYAN="$(tput setaf 6)"
+WHITE="$(tput setaf 7)"
+ERROR="${REV}Error:${NORM}"
 version="1.5"
 LogToTerm=1
 loglevel=info;
 regenerateStats=0;
+
+
+
+#/	Desc:	Gathers all the keys from the menu system and builds a proper string for getopts	
+#/	Out:	echo - switch_conditions
+#/	Expl:	switch_conditions=$(COMMON_MENU_SWITCH_GRAB)
+COMMON_MENU_SWITCH_GRAB(){
+	#shellcheck disable=SC2154
+	for KEY in "${!hp[@]}"; do
+		:
+		VALUE=${hp[$KEY]}
+		numcheck="${KEY:1:1}"
+		skip=false
+		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
+			skip=true
+		fi
+		double=""
+		if [[ ${#KEY} -gt 1 ]]; then
+			double=":"
+			dKEY="${KEY:0:1}"
+		else
+			dKEY=$KEY
+		fi
+		if [[ $KEY != "description" && $KEY != "useage" && $skip != true ]]; then
+			myline=$myline$dKEY$double
+		fi
+	done
+	echo "$myline"
+} #end_COMMON_MENU_SWITCH_GRAB
+
+#/	Desc:	Generates a menu based on a named template system
+#/  Global: declare -A hp=() assoiative array of switches
+#/			exects an associateve array named hp.
+#/			hp nomenclature hp[x] where x represents a switch
+#/			and where hp[xx] represents a switch and varriable
+#/	$1:		[error text]  OPTIONAL
+#/	$2:		name1
+#/	$3:		name1
+#/	Out:	a help text for the cli
+#/	Expl:	COMMON_MENU_HELP
+COMMON_MENU_HELP(){
+	if [[ $1 != "" ]]; then
+		echo -e "\nERROR: ${REV}${BOLD}$1${NORM}"
+	fi
+	echo -e \\n"Help documentation for ${BOLD}$0${NORM}"
+	echo -e "${hp[description]}"
+	echo -e "----------------------------------------------------------------------------------------"
+	echo -e "${BOLD}Basic usage:${NORM}${BOLD} $0 ${NORM} ${hp[useage]}"
+	etext=""
+	for KEY in "${!hp[@]}"; do
+		:
+		VALUE=${hp[$KEY]}
+		numcheck="${KEY:1:1}"
+		skip=false
+		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
+			skip=true
+			if [[ ${KEY:0:1} = "e" ]]; then
+				etext=$etext"${UND}${BOLD} Example:${NORM} $VALUE\n"
+			fi
+		fi
+		if [[ ${#KEY} -gt 1 ]]; then
+			dKEY="${KEY:0:1}"
+		else
+			dKEY=$KEY
+		fi
+		if [[ $KEY != "description" && $KEY != "useage" && $skip != true ]]; then
+			switches=$switches"${BOLD}-$dKEY${NORM} $VALUE\n"
+		fi
+	done  
+	echo -e "$switches"  | sort -n -k1
+	echo -e "$etext\n"
+	exit 1
+} #end_COMMON_MENU_HELP
+
+
 
 _check_stat_var_set_error=0;
 _check_stat_var_set(){
@@ -139,7 +226,11 @@ _div1024(){
 }
 
 _percentage(){
-	echo $(bc <<< "scale=2; $1*100/$2")
+	if [[ $1 = 0 || $1 = "" || $2 = 0 || $2 = "" ]]; then
+		echo "0"
+	else
+		echo $(bc <<< "scale=2; $1*100/$2")
+	fi
 }
 
 function jsonParse()
@@ -167,8 +258,10 @@ if [[ $volatilePSS = *"K" ]]; then
 	volatilePSS=1
 else
 	volatilePSS=${volatilePSS::-1}
+	if [[ $volatilePSS = "" ]]; then
+		volatilePSS=0
+	fi
 fi
-
 USEDMMC=$(mount | grep factory | head -1 | awk -F "/" '{print $3}' | awk -F " " '{print $1}');USEDMMC=${USEDMMC::-2};
 system() {	
 	let upSeconds=$(cat /proc/uptime | cut -d ' ' -f1 | cut -d '.' -f1);
@@ -414,22 +507,15 @@ _memperf(){
 performance(){
 	_placeTitle "Key Process Memory Infomation (MB)"
 	_placeLine "  Stats in MB and time" "Uptime\t\tPss\tShared\tRss\tVirtual"
-	#_memperf "runner" "node /wigwag/devicejs-core-modules/Runner/start.js"
-	#_memperf "devicejs-user" "=user"
-	_memperf "devicejs" "devicejs.conf"
-	_memperf "devicedb" "devicedb.yaml"
-	#_memperf "devicejs-modbus" "=modbus"
-	#_memperf "devicejs-modules" "=all-modules"
-	#_memperf "devicejs-bacnet" "=bacnet"
-	#_memperf "devicejs-zigbee" "=zigbee"
-	#_memperf "bacportal" "bin/bacportal"
-	#_memperf "support-node" "support/index"
-	_memperf "relay-term" "relay-term/src"
-	#_memperf "Watchdog" "deviceOS"
 	_memperf "edge-core" "edge-core"
 	_memperf "edge-proxy" "edge-proxy"
 	_memperf "maestro" "maestro-config.yaml"
+	_memperf "fluentbit" "td-agent-bit"
+	_memperf "devicedb" "devicedb.yaml"
+	_memperf "relay-term" "relay-term/src"
 	_memperf "edge-kubelet" "kubelet --root-dir"
+	_memperf "docker" "dockerd"
+	_memperf "containerd" "containerd"
 }
 
 memory(){
@@ -444,7 +530,7 @@ memory(){
 	remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
 	remainder=$(bc <<< "scale=1; $USED - $remainder")
 	UMP=$(_percentage $remainder $MEM )
-	_placeLine "  - Other:" "$remainder MB\t\t($UMP%)"
+	#_placeLine "  - Other:" "$remainder MB\t\t($UMP%)"
 	UMP=$(_percentage $AVAILABLE $MEM)
 	_placeLine "  - True Available Mem:" "$AVAILABLE MB\t\t($UMP%)"
 }
