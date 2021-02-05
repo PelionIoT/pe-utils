@@ -110,6 +110,18 @@ COMMON_MENU_HELP(){
 } #end_COMMON_MENU_HELP
 
 
+idmachine(){
+	source /etc/os-release
+	if [[ $LMP_MACHINE = "imx8mmevk" || $LMP_MACHINE = "uz3eg-iocc" ]]; then
+		PTYPE="2"
+		hardwareVersion="$LMP_MACHINE"
+		IPADDRESS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+	else
+		PTYPE="1"
+		IPADDRESS=$(ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
+	fi
+
+}
 
 _check_stat_var_set_error=0;
 _check_stat_var_set(){
@@ -280,7 +292,6 @@ system() {
 	MIN5="$(echo $LOAD | awk '{ print $2}')"
 	MIN15="$(echo $LOAD | awk '{ print $3}')"
 	TASKS="$(echo $LOAD | awk '{ print $4}')"
-	IPADDRESS=$(ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
 	readarray -t IPADDRESSES <<< $IPADDRESS
 	_placeTitle "System Infomation"
 	_placeLine "  - Uptime:" "$UPTIME"
@@ -328,8 +339,8 @@ firmware(){
 	userV=$(grep -ne 'version' /mnt/.overlay/user/slash/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
 	upgradeV=$(grep -ne 'version' /mnt/.overlay/upgrade/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
 	factoryV=$(grep -ne 'version' /mnt/.overlay/factory/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-	dd if=/dev/$USEDMMC of=/tmp/uboot.img seek=8 bs=1024 count=100 >> /dev/null 2>&1
-	ubootV=$(grep -a "WigWag-U-boot-version_id" /tmp/uboot.img | tail -1 | awk '{print $2}')
+	#dd if=/dev/$USEDMMC of=/tmp/uboot.img seek=8 bs=1024 count=100 >> /dev/null 2>&1
+	#ubootV=$(grep -a "WigWag-U-boot-version_id" /tmp/uboot.img | tail -1 | awk '{print $2}')
 	if [[ -e /mnt/.boot/version ]]; then
 		source /mnt/.boot/version
 		bootV=$bootversion
@@ -356,23 +367,17 @@ firmware(){
 	if [[ "$factoryV" = "" ]]; then
 		factoryV="  ^  "
 	fi
-	mp=$(mount | grep factory | head -1 | awk -F "/" '{print $3}' | awk -F " " '{print $1}');mp=${mp::-2}p1;
-	out=$(fdisk -l /dev/$USEDMMC"p1" | xargs | awk '{print $3}');
-	out=${out%.*}
 	Pschema="4Gb"
-	if [[ $out -eq 50 ]]; then
-		Pschema="8Gb"
-	fi
 	echo "${NORM}"
 	_placeTitle "Firmware Version Information"
-	_placeLine "  - Overlay Partition:" "$currentV"
-	_placeLine "  - User Partition:" "$userV"
-	_placeLine "  - Upgrade Partition:" "$upgradeV"
-	_placeLine "  - Factory Partition:" "$factoryV"
-	_placeLine "  - Partition Schema:" "$Pschema"
-	_placeLine "  - Boot Version:" "$bootV"
-	_placeLine "  - initRamfs Version:" "$initV"
-	_placeLine "  - U-Boot Version:" "$ubootV"
+	_placeLine "  - Pelion Edge Version:" "$currentV"
+	if [[ $PTYPE = 1 ]]; then
+		_placeLine "  - Overlay / Partition:" "$currentV"
+		_placeLine "  - User Partition:" "$userV"
+		_placeLine "  - Upgrade Partition:" "$upgradeV"
+		_placeLine "  - Factory Partition:" "$factoryV"
+		_placeLine "  - Partition Schema:" "$Pschema"
+	fi
 	_placeLine "  - Kernel Version:" "$kernelV"
 
 }
@@ -576,6 +581,7 @@ showthesticker(){
 
 main(){
 	load_statistics
+	idmachine
 	if [[ $about -eq 1 ]]; then
 		about
 	else
