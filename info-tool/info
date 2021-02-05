@@ -274,7 +274,7 @@ else
 		volatilePSS=0
 	fi
 fi
-USEDMMC=$(mount | grep factory | head -1 | awk -F "/" '{print $3}' | awk -F " " '{print $1}');USEDMMC=${USEDMMC::-2};
+
 system() {	
 	let upSeconds=$(cat /proc/uptime | cut -d ' ' -f1 | cut -d '.' -f1);
 	let secs=$((${upSeconds}%60))
@@ -293,7 +293,7 @@ system() {
 	MIN15="$(echo $LOAD | awk '{ print $3}')"
 	TASKS="$(echo $LOAD | awk '{ print $4}')"
 	readarray -t IPADDRESSES <<< $IPADDRESS
-	_placeTitle "System Infomation"
+	_placeTitle "System Information"
 	_placeLine "  - Uptime:" "$UPTIME"
 	_placeLine "  - Users:" "$USERS"
 	_placeLine "  - Load (1,5,15-min avg):" "$MIN1, $MIN5, $MIN15"
@@ -390,7 +390,7 @@ account(){
 		EDGECORESTATUS=$(curl -s http://localhost:9101/status)
 		AccountID=$(jsonParse $EDGECORESTATUS account-id)
 		Status=$(jsonParse $EDGECORESTATUS status)
-		_placeTitle "Account Infomation"
+		_placeTitle "Account Information"
 		_placeLine "  - Serial Number:" "$SN"
 		_placeLine "  - Device ID:" "$DID"
 		_placeLine "  - Cloud Server:" "$CLOUDURL"
@@ -415,11 +415,11 @@ hardware(){
 	if [[ "$DIETEMP" != "" ]]; then
 		DIETEMP=$(_div1000 $DIETEMP)" C"
 	fi
-	_placeTitle "Hardware Infomation"
+	_placeTitle "Hardware Information"
 	_placeLine "  - Hardware Version:" "$HWV"
 	_placeLine "  - Ethernet Mac:" "$ETHERNETMAC"
 	_placeLine "  - Physical Memory:" "$MEM MB"
-	_placeLine "  - SOC die tempurature:" "$DIETEMP"
+	_placeLine "  - SOC die temperature:" "$DIETEMP"
 	_placeLine "  - CPU Count:" "$CPUCOUNT"
 	_placeLine "  - CPU Stats:" "Current\tMinimum\tMaximum  "
 	for (( i = 0; i < $CPUCOUNT; i++ )); do
@@ -510,7 +510,7 @@ _memperf(){
 }
 
 performance(){
-	_placeTitle "Key Process Memory Infomation (MB)"
+	_placeTitle "Key Process Memory Information (MB)"
 	_placeLine "  Stats in MB and time" "Uptime\t\tPss\tShared\tRss\tVirtual"
 	_memperf "edge-core" "edge-core"
 	_memperf "edge-proxy" "edge-proxy"
@@ -527,9 +527,9 @@ memory(){
 	_placeTitle "System Memory"
 	_placeLine "  - Used/Total:" "$USED/$MEM MB\t($UMP%)"
 	UMP=$(_percentage $PSSTOT $MEM)
-	_placeLine "  - Key Proccesses:" "$PSSTOT MB\t($UMP%) "
+	_placeLine "  - Key Processes:" "$PSSTOT MB\t($UMP%) "
 	UMP=$(_percentage $volatilePSS $MEM)
-	_placeLine "  - Volatile loging:" "$volatilePSS MB\t\t($UMP%)"
+	_placeLine "  - Volatile logging:" "$volatilePSS MB\t\t($UMP%)"
 	r2=$(bc <<< "scale=1; $MEM - $USED")
 	r2=$(bc <<< "scale=1; $AVAILABLE - $r2 ")
 	remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
