@@ -1195,32 +1195,6 @@ getPVSize(){
 
 
 
-#Gets a list of files from a directory with a grep filter
-#basically runs ls | grep Arg2
-#arg1: path to directory
-#arg2: grep filter
-#returns a global named readDirArray
-#example: reads the local dir, filter  "node" returns ray
-#	readDirectoryToArray_withGrep . "node"
-#	printf '%s\n' "${readDirArray[@]}"
-readDirArray=();
-readDirectoryToArray_withGrep(){
-	log silly "readDirectoryToArray_withGrep($1,$2)"
-	path=$1
-	if [[ $2 = "" ]]; then
-		grepfilter="";
-	fi
-	grepfilter=$2
-	i=0
-	pushd . >> /dev/null
-	cd $path
-	while read line
-	do
-		readDirArray[ $i ]="$line"        
-		(( i++ ))
-	done < <(ls | grep "$grepfilter")
-	popd >> /dev/null
-} #end_readDirectoryToArray_withGrep
 
 
  #finds the sd disk to to write to...
