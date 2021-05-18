@@ -162,6 +162,7 @@ load_statistics(){
 		_check_stat_var_set "$sixBMAC_7"
 		_check_stat_var_set "$gatewayServicesAddress"
 		_check_stat_var_set "$edgek8sServicesAddress"
+		_check_stat_var_set "$containerServicesAddress"
 		_check_stat_var_set "$cloudAddress"
 		if [[ $_check_stat_var_set_error -ne 0 ]]; then
 			echo "Stats out of sync, relaoding..."

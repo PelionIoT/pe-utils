@@ -98,6 +98,7 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             API_URL="https://api.us-east-1.mbedcloud.com"
             GW_URL="https://gateways.us-east-1.mbedcloud.com"
             k8s_URL="https://edge-k8s.us-east-1.mbedcloud.com"
+            containers_URL="https://containers.us-east-1.mbedcloud.com"
             ;;
         m)
             CLOUD_LAB="$OPTARG"
@@ -107,18 +108,21 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
                     API_URL="https://lab-api.mbedcloudintegration.net"
                     GW_URL="https://gateways.mbedcloudintegration.net"
                     k8s_URL="https://edge-k8s.mbedcloudintegration.net"
+                    containers_URL="https://containers.mbedcloudintegration.net"
                     ;;
                 mbedcloudstaging)
                     LwM2M_URL="coaps://lwm2m-os2.mbedcloudstaging.net"
                     API_URL="https://api-os2.mbedcloudstaging.net"
                     GW_URL="https://gateways.mbedcloudstaging.net"
                     k8s_URL="https://edge-k8s.mbedcloudstaging.net"
+                    containers_URL="https://containers.mbedcloudstaging.net"
                     ;;
                 mbedcloud)
                     LwM2M_URL="coaps://lwm2m.$PROD_REGION.mbedcloud.com"
                     API_URL="https://api.$PROD_REGION.mbedcloud.com"
                     GW_URL="https://gateways.$PROD_REGION.mbedcloud.com"
                     k8s_URL="https://edge-k8s.$PROD_REGION.mbedcloud.com"
+                    containers_URL="https://containers.$PROD_REGION.mbedcloud.com"
                     ;;
                 *)
                     cli_error "Unknown mbed-cloud lab instance - $CLOUD_LAB. Check help for expected values."
@@ -225,6 +229,7 @@ echo "{
     ],
     \"gatewayServicesAddress\": \"$GW_URL\",
     \"edgek8sServicesAddress\": \"$k8s_URL\",
+    \"containerServicesAddress\": \"$containers_URL\",
     \"cloudAddress\": \"$API_URL\"
 }" > $OUTPUT_DIR/identity.json
 

@@ -16,6 +16,7 @@ s=$?
 [[ -z "$(cat ./identity.json | jq '.deviceID')" ]] && echo "US_PROD - deviceID is empty. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect edgek8sServicesAddress. Failed!" && exit 1
+[[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect containerServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://api.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
 
@@ -30,6 +31,7 @@ s=$?
 [[ -z "$(cat ./identity.json | jq '.deviceID')" ]] && echo "OS2 - deviceID is empty. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect edgek8sServicesAddress. Failed!" && exit 1
+[[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect containerServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://api-os2.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
 
@@ -44,5 +46,6 @@ s=$?
 [[ -z "$(cat ./identity.json | jq '.deviceID')" ]] && echo "INT - deviceID is empty. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect edgek8sServicesAddress. Failed!" && exit 1
+[[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect containerServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://lab-api.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
