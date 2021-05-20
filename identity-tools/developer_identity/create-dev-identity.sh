@@ -46,7 +46,7 @@ cli_help() {
     -o <output_directory>         output directory of identity.json (default: './')
     -i <device_id>                edge-core's internal-id (mandatory)
     -w <hw_type>                  hardware version of the gateway, refer configurations section in
-                                  $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: 'rpi3bplus')
+                                  $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: 'cat /proc/device-tree/model')
     -r <radio_config>             radio configuration of the gateway, refer configurations section in
                                   $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: '00')
     -l <led_config>               status led configuration of the gateway (default: '01')
@@ -73,6 +73,9 @@ cli_help() {
 
 OPTIND=1
 
+HW_VERSION="unknown"
+[ -f /proc/device-tree/model ] && HW_VERSION=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))
+
 while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
     case "$opt" in
         h|-help)
@@ -91,7 +94,6 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             CLOUD_LAB="mbedcloud"
             CLOUD_LAB_REGION="us-east-1"
             RADIO_CONFIG="00"
-            HW_VERSION="rpi3bplus"
             LED_CONFIG="01"
             OUTPUT_DIR="./"
             LwM2M_URL="coaps://lwm2m.us-east-1.mbedcloud.com"
