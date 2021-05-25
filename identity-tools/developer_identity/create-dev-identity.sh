@@ -20,6 +20,9 @@ set -e
 export DEVID_CLI_DIR=$(cd $(dirname $0) && pwd)
 . "$DEVID_CLI_DIR/common.sh"
 
+HW_VERSION="unknown"
+[ -f /proc/device-tree/model ] && HW_VERSION=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))
+
 cli_help() {
   cli_name=${0##*/}
   echo "
@@ -46,7 +49,7 @@ cli_help() {
     -o <output_directory>         output directory of identity.json (default: './')
     -i <device_id>                edge-core's internal-id (mandatory)
     -w <hw_type>                  hardware version of the gateway, refer configurations section in
-                                  $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: 'cat /proc/device-tree/model')
+                                  $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: '$HW_VERSION')
     -r <radio_config>             radio configuration of the gateway, refer configurations section in
                                   $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: '00')
     -l <led_config>               status led configuration of the gateway (default: '01')
@@ -72,9 +75,6 @@ cli_help() {
 [ "$1" == "-v" ] && [ ! -n "$2" ] && cli_help && exit 1
 
 OPTIND=1
-
-HW_VERSION="unknown"
-[ -f /proc/device-tree/model ] && HW_VERSION=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))
 
 while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
     case "$opt" in
