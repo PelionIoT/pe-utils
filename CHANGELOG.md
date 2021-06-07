@@ -1,3 +1,9 @@
+## Pelion Edge utilities 2.0.6
+
+1. [identity] Update the filter to accept any values of LwM2M service address and generate respecitve Edge gateway service addresses.
+1. [identity] Removed the API address from identity file.
+1. [info] Report Gateway service address as cloud server.
+
 ## Pelion Edge utilities 2.0.5
 
 1. [identity] Populate the HW_VERSION by extracting the device model from file `/proc/device-tree/model`.
