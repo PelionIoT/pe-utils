@@ -38,7 +38,7 @@ getEdgeStatus() {
     [[ -z "$edge_status" ]] && edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
     OU=`echo $edge_status | jq -r '."account-id"'`
     internalid=`echo $edge_status | jq -r '."internal-id"'`
-    lwm2mserveruri=`echo $edge_status | jq -r '."lwm2m-server-uri"'`
+    lwm2mserveruri=`echo $edge_status | jq -r '."lwm2m-server-uri"' | cut -d':' -f 2 | sed 's/^\/\///'`
     status=`echo $edge_status | jq -r .status`
     endpointname=`echo $edge_status | jq -r '."endpoint-name"'`
 }
@@ -60,11 +60,15 @@ execute () {
             if [ -f ${IDENTITY_DIR}/identity.json ] ; then
                 cp ${IDENTITY_DIR}/identity.json ${IDENTITY_DIR}/identity_original.json
             fi
-            IFS='.' read -ra ADDR <<< "$lwm2mserveruri"
+            [[ $lwm2mserveruri == *"lwm2m"* ]] && commonaddr=${lwm2mserveruri#"lwm2m"}
+            [[ $lwm2mserveruri == *"lwm2m-udp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-udp"}
+            [[ $lwm2mserveruri == *"lwm2m-tcp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-tcp"}
+            [[ $lwm2mserveruri == *"lwm2m-os2"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-os2"}
+            [[ $lwm2mserveruri == *"lwm2m-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-integration-lab"}
+            echo "common part of the address - $commonaddr"
             $CURR_DIR/developer_identity/create-dev-identity.sh\
                 -d \
-                -z ${ADDR[${#ADDR[@]} - 3]}\
-                -m ${ADDR[${#ADDR[@]} - 2]}\
+                -m $commonaddr\
                 -e $endpointname\
                 -n $OU\
                 -o ${IDENTITY_DIR}\
