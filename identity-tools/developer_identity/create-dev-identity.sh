@@ -36,13 +36,9 @@ cli_help() {
     -v                            verbose logging
     -V                            output the version number
     -d                            generate identity using default values
-    -m <lab_instance>             one of the following mbed-cloud lab instance (default: 'mbedcloud') -
-                                  [ mbedcloudintegration,
-                                    mbedcloudstaging,
-                                    mbedcloud ]
-    -c <lwm2m_coap_url>           lwm2m coap server address (default: 'coaps://lwm2m.us-east-1.mbedcloud.com')
+    -m <common_address>           part of the cloud address common to all domains
+    -c <container_url>            containers api address (default: 'https://containers.us-east-1.mbedcloud.com')
     -g <gw_server_url>            gateway services api address (default: 'https://gateways.us-east-1.mbedcloud.com')
-    -s <api_server_url>           api server address (default: 'https://api.us-east-1.mbedcloud.com')
     -k <k8s_server_url>.          edge kubernetes server address (default: 'https://edge-k8s.us-east-1.mbedcloud.com')
     -e <serial_number>            [optional] gateway serial number (default: autogenerate a random serial number)
     -n <account_id>               account identifier (mandatory)
@@ -53,7 +49,6 @@ cli_help() {
     -r <radio_config>             radio configuration of the gateway, refer configurations section in
                                   $DEVID_CLI_DIR/radioProfile.template.json#L228 (default: '00')
     -l <led_config>               status led configuration of the gateway (default: '01')
-    -z <prod_region>              production cloud region
 
   Examples:
 
@@ -91,55 +86,25 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             ;;
         d)
             USE_DEFAULT=1
-            CLOUD_LAB="mbedcloud"
-            CLOUD_LAB_REGION="us-east-1"
+            COMMON_ADDR=".us-east-1.mbedcloud.com"
             RADIO_CONFIG="00"
             LED_CONFIG="01"
             OUTPUT_DIR="./"
-            LwM2M_URL="coaps://lwm2m.us-east-1.mbedcloud.com"
-            API_URL="https://api.us-east-1.mbedcloud.com"
             GW_URL="https://gateways.us-east-1.mbedcloud.com"
             k8s_URL="https://edge-k8s.us-east-1.mbedcloud.com"
             containers_URL="https://containers.us-east-1.mbedcloud.com"
             ;;
         m)
-            CLOUD_LAB="$OPTARG"
-            case "$CLOUD_LAB" in
-                mbedcloudintegration)
-                    LwM2M_URL="coaps://lwm2m-integration-lab.mbedcloudintegration.net"
-                    API_URL="https://lab-api.mbedcloudintegration.net"
-                    GW_URL="https://gateways.mbedcloudintegration.net"
-                    k8s_URL="https://edge-k8s.mbedcloudintegration.net"
-                    containers_URL="https://containers.mbedcloudintegration.net"
-                    ;;
-                mbedcloudstaging)
-                    LwM2M_URL="coaps://lwm2m-os2.mbedcloudstaging.net"
-                    API_URL="https://api-os2.mbedcloudstaging.net"
-                    GW_URL="https://gateways.mbedcloudstaging.net"
-                    k8s_URL="https://edge-k8s.mbedcloudstaging.net"
-                    containers_URL="https://containers.mbedcloudstaging.net"
-                    ;;
-                mbedcloud)
-                    LwM2M_URL="coaps://lwm2m.$PROD_REGION.mbedcloud.com"
-                    API_URL="https://api.$PROD_REGION.mbedcloud.com"
-                    GW_URL="https://gateways.$PROD_REGION.mbedcloud.com"
-                    k8s_URL="https://edge-k8s.$PROD_REGION.mbedcloud.com"
-                    containers_URL="https://containers.$PROD_REGION.mbedcloud.com"
-                    ;;
-                *)
-                    cli_error "Unknown mbed-cloud lab instance - $CLOUD_LAB. Check help for expected values."
-                    exit 1
-                    ;;
-            esac
+            COMMON_ADDR="$OPTARG"
+            GW_URL="https://gateways${COMMON_ADDR}"
+            k8s_URL="https://edge-k8s${COMMON_ADDR}"
+            containers_URL="https://containers${COMMON_ADDR}"
             ;;
         c)
-            LwM2M_URL="$OPTARG"
+            containers_URL="$OPTARG"
             ;;
         g)
             GW_URL="$OPTARG"
-            ;;
-        s)
-            API_URL="$OPTARG"
             ;;
         k)
             k8s_URL="$OPTARG"
@@ -164,9 +129,6 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             ;;
         l)
             LED_CONFIG="$OPTARG"
-            ;;
-        z)
-            PROD_REGION="$OPTARG"
             ;;
         *)
             cli_help
@@ -231,8 +193,7 @@ echo "{
     ],
     \"gatewayServicesAddress\": \"$GW_URL\",
     \"edgek8sServicesAddress\": \"$k8s_URL\",
-    \"containerServicesAddress\": \"$containers_URL\",
-    \"cloudAddress\": \"$API_URL\"
+    \"containerServicesAddress\": \"$containers_URL\"
 }" > $OUTPUT_DIR/identity.json
 
 cli_debug "$(cat $OUTPUT_DIR/identity.json)"

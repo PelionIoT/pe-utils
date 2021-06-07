@@ -10,6 +10,7 @@ echo "Testing generating identity for US PROD instance..."
 ./../generate-identity.sh 0 . $PROD_EDGE_CORE_STATUS
 s=$?
 [ "$s" != 0 ] && echo "Failed to generate PROD lab identity.json" && exit 1
+cat ./identity.json
 # inspect the identity file
 [[ -z "$(cat ./identity.json | jq '.serialNumber')" ]] && echo "US_PROD - serialNumber is empty. Failed!" && exit 1
 [[ -z "$(cat ./identity.json | jq '.OU')" ]] && echo "US_PROD - OU is empty. Failed!" && exit 1
@@ -17,14 +18,15 @@ s=$?
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect edgek8sServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect containerServicesAddress. Failed!" && exit 1
-[[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://api.us-east-1.mbedcloud.com\"" ]] && echo "US_PROD - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
+rm -rf identity*
 
 echo ""
 echo "Testing generating identity for OS2 instance..."
 ./../generate-identity.sh 0 . $OS2_EDGE_CORE_STATUS
 s=$?
 [ "$s" != 0 ] && echo "Failed to generate OS2 lab identity.json" && exit 1
+cat ./identity.json
 # inspect the identity file
 [[ -z "$(cat ./identity.json | jq '.serialNumber')" ]] && echo "OS2 - serialNumber is empty. Failed!" && exit 1
 [[ -z "$(cat ./identity.json | jq '.OU')" ]] && echo "OS2 - OU is empty. Failed!" && exit 1
@@ -32,14 +34,15 @@ s=$?
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect edgek8sServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect containerServicesAddress. Failed!" && exit 1
-[[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://api-os2.mbedcloudstaging.net\"" ]] && echo "OS2 - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
+rm -rf identity*
 
 echo ""
 echo "Testing generating identity for INT instance..."
 ./../generate-identity.sh 0 . $INT_EDGE_CORE_STATUS
 s=$?
 [ "$s" != 0 ] && echo "Failed to generate INT lab identity.json" && exit 1
+cat ./identity.json
 # inspect the identity file
 [[ -z "$(cat ./identity.json | jq '.serialNumber')" ]] && echo "INT - serialNumber is empty. Failed!" && exit 1
 [[ -z "$(cat ./identity.json | jq '.OU')" ]] && echo "INT - OU is empty. Failed!" && exit 1
@@ -47,5 +50,5 @@ s=$?
 [[ "$(cat ./identity.json | jq '.gatewayServicesAddress')" != "\"https://gateways.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect gatewayServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.edgek8sServicesAddress')" != "\"https://edge-k8s.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect edgek8sServicesAddress. Failed!" && exit 1
 [[ "$(cat ./identity.json | jq '.containerServicesAddress')" != "\"https://containers.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect containerServicesAddress. Failed!" && exit 1
-[[ "$(cat ./identity.json | jq '.cloudAddress')" != "\"https://lab-api.mbedcloudintegration.net\"" ]] && echo "INT - Incorrect cloudAddress. Failed!" && exit 1
 echo "Success"
+rm -rf identity*
