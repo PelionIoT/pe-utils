@@ -163,7 +163,6 @@ load_statistics(){
 		_check_stat_var_set "$gatewayServicesAddress"
 		_check_stat_var_set "$edgek8sServicesAddress"
 		_check_stat_var_set "$containerServicesAddress"
-		_check_stat_var_set "$cloudAddress"
 		if [[ $_check_stat_var_set_error -ne 0 ]]; then
 			echo "Stats out of sync, relaoding..."
 			rm -rf /wigwag/system/lib/bash/relaystatics.sh
@@ -387,7 +386,7 @@ account(){
 	if [ -d /userdata/mbed ]; then
 		SN=$serialNumber
 		DID=$deviceID
-		CLOUDURL=$cloudAddress
+		CLOUDURL=$gatewayServicesAddress
 		EDGECORESTATUS=$(curl -s http://localhost:9101/status)
 		AccountID=$(jsonParse $EDGECORESTATUS account-id)
 		Status=$(jsonParse $EDGECORESTATUS status)
