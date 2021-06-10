@@ -60,13 +60,25 @@ execute () {
             if [ -f ${IDENTITY_DIR}/identity.json ] ; then
                 cp ${IDENTITY_DIR}/identity.json ${IDENTITY_DIR}/identity_original.json
             fi
-            [[ $lwm2mserveruri == *"lwm2m"* ]] && commonaddr=${lwm2mserveruri#"lwm2m"}
-            [[ $lwm2mserveruri == *"lwm2m-udp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-udp"}
-            [[ $lwm2mserveruri == *"lwm2m-tcp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-tcp"}
-            [[ $lwm2mserveruri == *"lwm2m-os2"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-os2"}
+
             [[ $lwm2mserveruri == *"lwm2m-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-integration-lab"}
+            [[ $lwm2mserveruri == *"udp-lwm2m-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"udp-lwm2m-integration-lab"}
+            [[ $lwm2mserveruri == *"tcp-lwm2m-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"tcp-lwm2m-integration-lab"}
+            [[ $lwm2mserveruri == *"lwm2m-udp-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-udp-integration-lab"}
+            [[ $lwm2mserveruri == *"lwm2m-tcp-integration-lab"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-tcp-integration-lab"}
+
+            [[ $lwm2mserveruri == *"lwm2m-os2"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-os2"}
+            [[ $lwm2mserveruri == *"udp-lwm2m-os2"* ]] && commonaddr=${lwm2mserveruri#"udp-lwm2m-os2"}
+            [[ $lwm2mserveruri == *"tcp-lwm2m-os2"* ]] && commonaddr=${lwm2mserveruri#"tcp-lwm2m-os2"}
+            [[ $lwm2mserveruri == *"lwm2m-udp-os2"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-udp-os2"}
+            [[ $lwm2mserveruri == *"lwm2m-tcp-os2"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-tcp-os2"}
+
+            [[ $lwm2mserveruri == *"lwm2m"* ]] && commonaddr=${lwm2mserveruri#"lwm2m"}
             [[ $lwm2mserveruri == *"udp-lwm2m"* ]] && commonaddr=${lwm2mserveruri#"udp-lwm2m"}
             [[ $lwm2mserveruri == *"tcp-lwm2m"* ]] && commonaddr=${lwm2mserveruri#"tcp-lwm2m"}
+            [[ $lwm2mserveruri == *"lwm2m-udp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-udp"}
+            [[ $lwm2mserveruri == *"lwm2m-tcp"* ]] && commonaddr=${lwm2mserveruri#"lwm2m-tcp"}
+
             echo "common part of the address - $commonaddr"
             $CURR_DIR/developer_identity/create-dev-identity.sh\
                 -d \
