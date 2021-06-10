@@ -1,3 +1,7 @@
+## Pelion Edge utilities 2.0.7
+
+1. [identity] Added support in address derviation for a variant of UDP/TCP LwM2M domain.
+
 ## Pelion Edge utilities 2.0.6
 
 1. [identity] Update the filter to accept any values of LwM2M service address and generate respecitve Edge gateway service addresses.
