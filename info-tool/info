@@ -1,6 +1,7 @@
 #!/bin/bash
-
-# Copyright (c) 2018, Arm Limited and affiliates.
+# Copyright (c) 2020-2021, Pelion IoT and affiliates. 
+# Copyright (c) 2018-2020, Arm Limited and affiliates.
+# 
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +18,7 @@
 
 #https://github.com/longsleep/build-pine64-image/blob/master/simpleimage/platform-scripts/pine64_health.sh
 #---------------Configuration-------------#
-#source common.sh nofunc
+
 NORM="$(tput sgr0)"
 BOLD="$(tput bold)"
 REV="$(tput smso)"
@@ -31,161 +32,99 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 ERROR="${REV}Error:${NORM}"
-version="1.5"
+version="1.9"
 LogToTerm=1
-loglevel=info;
-regenerateStats=0;
+loglevel=debug;
 
 
+THISMACHINE="generic"
 
-#/	Desc:	Gathers all the keys from the menu system and builds a proper string for getopts	
-#/	Out:	echo - switch_conditions
-#/	Expl:	switch_conditions=$(COMMON_MENU_SWITCH_GRAB)
-COMMON_MENU_SWITCH_GRAB(){
-	#shellcheck disable=SC2154
-	for KEY in "${!hp[@]}"; do
-		:
-		VALUE=${hp[$KEY]}
-		numcheck="${KEY:1:1}"
-		skip=false
-		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
-			skip=true
-		fi
-		double=""
-		if [[ ${#KEY} -gt 1 ]]; then
-			double=":"
-			dKEY="${KEY:0:1}"
-		else
-			dKEY=$KEY
-		fi
-		if [[ $KEY != "description" && $KEY != "useage" && $skip != true ]]; then
-			myline=$myline$dKEY$double
-		fi
-	done
-	echo "$myline"
-} #end_COMMON_MENU_SWITCH_GRAB
-
-#/	Desc:	Generates a menu based on a named template system
-#/  Global: declare -A hp=() assoiative array of switches
-#/			exects an associateve array named hp.
-#/			hp nomenclature hp[x] where x represents a switch
-#/			and where hp[xx] represents a switch and varriable
-#/	$1:		[error text]  OPTIONAL
-#/	$2:		name1
-#/	$3:		name1
-#/	Out:	a help text for the cli
-#/	Expl:	COMMON_MENU_HELP
-COMMON_MENU_HELP(){
-	if [[ $1 != "" ]]; then
-		echo -e "\nERROR: ${REV}${BOLD}$1${NORM}"
+_debug(){
+	if [[ $loglevel = "debug" ]]; then
+		echo "debug: $1"
 	fi
-	echo -e \\n"Help documentation for ${BOLD}$0${NORM}"
-	echo -e "${hp[description]}"
-	echo -e "----------------------------------------------------------------------------------------"
-	echo -e "${BOLD}Basic usage:${NORM}${BOLD} $0 ${NORM} ${hp[useage]}"
-	etext=""
-	for KEY in "${!hp[@]}"; do
-		:
-		VALUE=${hp[$KEY]}
-		numcheck="${KEY:1:1}"
-		skip=false
-		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
-			skip=true
-			if [[ ${KEY:0:1} = "e" ]]; then
-				etext=$etext"${UND}${BOLD} Example:${NORM} $VALUE\n"
-			fi
-		fi
-		if [[ ${#KEY} -gt 1 ]]; then
-			dKEY="${KEY:0:1}"
-		else
-			dKEY=$KEY
-		fi
-		if [[ $KEY != "description" && $KEY != "useage" && $skip != true ]]; then
-			switches=$switches"${BOLD}-$dKEY${NORM} $VALUE\n"
-		fi
-	done  
-	echo -e "$switches"  | sort -n -k1
-	echo -e "$etext\n"
-	exit 1
-} #end_COMMON_MENU_HELP
-
-
-idmachine(){
-	source /etc/os-release
-	if [[ $LMP_MACHINE = "imx8mmevk" || $LMP_MACHINE = "uz3eg-iocc" ]]; then
-		PTYPE="2"
-		hardwareVersion="$LMP_MACHINE"
-		IPADDRESS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
-	else
-		PTYPE="1"
-		IPADDRESS=$(ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
-	fi
-
 }
 
-_check_stat_var_set_error=0;
-_check_stat_var_set(){
-	#echo -en "checking $1: "
-	if [[ $1 = "" ]]; then
-		_check_stat_var_set_error=1
+#This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
+STORAGE=EDGE_DATA
+STORAGE=/userdata
+set_storage_locations(){
+	if [[ -e $STORAGE ]]; then
+		RFILE=$STORAGE/info/relaystatics.sh
+		IFILE=$STORAGE/edge_gw_config/identity.json
+	else
+		RFILE=/wigwag/system/lib/bash/relaystatics.sh
+		IFILE=/userdata/edge_gw_config/identity.json
 	fi
-	#echo "$_check_stat_var_set_error"
+}
+set_storage_locations
+
+#This function sets global variables that the info command expects to be set on a OS basis.  Yocto OS is implemented.  Extend this function to implement other OS's
+set_OS_vars(){
+	OS="unknown"
+	OSVERSION="unknown"
+	source /etc/os-release
+	if [[ $LMP_MACHINE != "" ]]; then
+		OS="LMP"
+		OSVERSION="$PRETTY_NAME"
+	fi
+}
+
+#all variables that are hardware dependent
+set_machine_vars(){
+	source /etc/os-release
+	if [[ $LMP_MACHINE != "" ]]; then
+		THISMACHINE="$LMP_MACHINE"
+	fi
+	ALLIPS=""
+	declare -Ag TEMPRAY
+	if [[ $THISMACHINE = "imx8mmevk" ]]; then
+		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+		CPUTEMP="HI"
+	elif [[ $THISMACHINE = "uz3eg-iocc" ]]; then
+		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+		TEMPRAY["LPD near the APU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw) C"
+		TEMPRAY["FPD near the RPU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp1_remote_temp_raw) C"
+		TEMPRAY["PL sensor"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp2_pl_temp_raw) C"
+	else
+		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+		#CPUTEMP=$(cat /sys/devices/virtual/thermal/thermal_zone0/temp)
+	fi
 }
 
 load_statistics(){
-	if [[ $regenerateStats -eq 1 ]]; then
-		rm -rf /wigwag/system/lib/bash/relaystatics.sh
-
+	if [[ -e $RFILE ]]; then
+		source $RFILE
 	fi
-	if [[ -e "/wigwag/system/lib/bash/relaystatics.sh" ]]; then
-		source "/wigwag/system/lib/bash/relaystatics.sh"
-		_check_stat_var_set "$serialNumber"
-		_check_stat_var_set "$OU"
-		_check_stat_var_set "$deviceID"
-		_check_stat_var_set "$hardwareVersion"
-		_check_stat_var_set "$radioConfig"
-		_check_stat_var_set "$ledConfig"
-		_check_stat_var_set "$category"
-		_check_stat_var_set "$ethernetMAC_0"
-		_check_stat_var_set "$ethernetMAC_1"
-		_check_stat_var_set "$ethernetMAC_2"
-		_check_stat_var_set "$ethernetMAC_3"
-		_check_stat_var_set "$ethernetMAC_4"
-		_check_stat_var_set "$ethernetMAC_5"
-		_check_stat_var_set "$sixBMAC_0"
-		_check_stat_var_set "$sixBMAC_1"
-		_check_stat_var_set "$sixBMAC_2"
-		_check_stat_var_set "$sixBMAC_3"
-		_check_stat_var_set "$sixBMAC_4"
-		_check_stat_var_set "$sixBMAC_5"
-		_check_stat_var_set "$sixBMAC_6"
-		_check_stat_var_set "$sixBMAC_7"
-		_check_stat_var_set "$gatewayServicesAddress"
-		_check_stat_var_set "$edgek8sServicesAddress"
-		_check_stat_var_set "$containerServicesAddress"
-		if [[ $_check_stat_var_set_error -ne 0 ]]; then
-			echo "Stats out of sync, relaoding..."
-			rm -rf /wigwag/system/lib/bash/relaystatics.sh
-			if [[ -e /userdata/edge_gw_config/identity.json ]]; then
-				/wigwag/system/bin/json2sh /userdata/edge_gw_config/identity.json /wigwag/system/lib/bash/relaystatics.sh
-				source "/wigwag/system/lib/bash/relaystatics.sh"
-			fi
+	EDGECORESTATUS=$(curl -s localhost:9101/status);
+	if [[ $EDGECORESTATUS = "" ]]; then
+		Status="${MAGENTA}offline${NORM}"
+	elif [[ $AccountID = "" ]]; then
+		AccountID=$(echo $EDGECORESTATUS | jq -r '."account-id"')
+		Status=$(echo $EDGECORESTATUS | jq -r '."status"')
+		DID=$(echo $EDGECORESTATUS | jq -r '."endpoint-name"')
+		URL_LWM2Mserver=$(echo $EDGECORESTATUS | jq -r '."lwm2m-server-uri"'| awk -F "?" '{print $1}')
+		if [[ -e $IFILE ]]; then
+			URL_gatewayServicesAddress=$(cat $IFILE | jq -r '."gatewayServicesAddress"')
+			URL_edgek8sServicesAddress=$(cat $IFILE | jq -r '."edgek8sServicesAddress"')
+			URL_containerServicesAddress=$(cat $IFILE | jq -r '."containerServicesAddress"')
 		fi
 	else
-		if [[ -e /userdata/edge_gw_config/identity.json ]]; then
-			/wigwag/system/bin/json2sh /userdata/edge_gw_config/identity.json /wigwag/system/lib/bash/relaystatics.sh
-			source "/wigwag/system/lib/bash/relaystatics.sh"
-		fi
+		Status=$(echo $EDGECORESTATUS | jq -r '."status"')
+	fi
+	if [[ ! -e $RFILE && $URL_gatewayServicesAddress != "" ]]; then
+		{ 
+			echo "AccountID=\"$AccountID\""
+			echo "DID=\"$DID\""
+			echo "URL_LWM2Mserver=\"$URL_LWM2Mserver\""
+			echo "URL_gatewayServicesAddress=\"$URL_gatewayServicesAddress\""
+			echo "URL_edgek8sServicesAddress=\"$URL_edgek8sServicesAddress\""
+			echo "URL_containerServicesAddress=\"$URL_containerServicesAddress\""
+		} > $RFILE
 	fi
 }
 
-#run eetool
 
-
-_placeTitle(){
-	TITLE="$1"
-	echo -e "\n${YELLOW}$TITLE${NORM}"
-}
 
 _exec(){
 	local cmd="$1"
@@ -194,6 +133,12 @@ _exec(){
 		echo "$out"
 	fi
 }
+
+_placeTitle(){
+	TITLE="$1"
+	echo -e "\n${YELLOW}$TITLE${NORM}"
+}
+
 _placeLine(){
 	SUBJECT="$1"
 	BODY="${2:-n/a}"
@@ -214,8 +159,14 @@ _placeLine(){
 	echo -e "${CYAN}$BODY${NORM}"
 }
 
+_placeLine_ifSet(){
+	if [[ $2 != "" ]]; then
+		_placeLine "$1" "$2"
+	fi
+}
+
 _placeHeader(){
-	echo -e "\n\n${RED}$1 ${NORM}"
+	echo -e "\n\n${YELLOW}${UND}$1 ${NORM}"
 }
 
 _div1000(){
@@ -245,17 +196,14 @@ _percentage(){
 	fi
 }
 
-function jsonParse()
-{
-	echo $1 | \
-	sed -e 's/[{}]/''/g' | \
-	sed -e 's/", "/'\",\"'/g' | \
-	sed -e 's/","/'\"---BREAK---\"'/g' | \
-	awk -F=':' -v RS='---BREAK---' "\$1~/\"$2\"/ {print}" | \
-	sed -e "s/\"$2\"://" | \
-	tr -d "\n\t" | \
-	sed -e 's/^"//'  -e 's/"$//'
+_cat_if_exists(){
+	if [[ -e "$1" ]]; then
+		cat "$1"
+	else
+		echo ""
+	fi
 }
+
 
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 MEM=$(_div1000b "$MEM")
@@ -285,23 +233,22 @@ system() {
 		UPTIME="${days}d ";
 	fi
 	UPTIME="$UPTIME${hours}h ${mins}m ${secs}s"
-	#let upSeconds=$(cat /proc/uptime | cut -d ' ' -f1 | cut -d '.' -f1);let secs=$((${upSeconds}%60));let mins=$((${upSeconds}/60%60));let hours=$((${upSeconds}/3600%24));let days=$((${upSeconds}/86400));UPTIME="${days}d ";UPTIME="$UPTIME${hours}h ${mins}m ${secs}s";echo $UPTIME
 	USERS="$(who | cut -d ' ' -f1 | sort | uniq | wc -l) users"
 	LOAD="$(cat /proc/loadavg)"
 	MIN1="$(echo $LOAD | awk '{ print $1}')"
 	MIN5="$(echo $LOAD | awk '{ print $2}')"
 	MIN15="$(echo $LOAD | awk '{ print $3}')"
 	TASKS="$(echo $LOAD | awk '{ print $4}')"
-	readarray -t IPADDRESSES <<< $IPADDRESS
+	readarray -t IPRAY <<< $ALLIPS
 	_placeTitle "System Information"
 	_placeLine "  - Uptime:" "$UPTIME"
 	_placeLine "  - Users:" "$USERS"
 	_placeLine "  - Load (1,5,15-min avg):" "$MIN1, $MIN5, $MIN15"
 	_placeLine "  - Queued Tasks:" "$TASKS"
 	#_placeLine "  - Watchdog:" "$WDOGPID"
-	IPADDRESSES_len=${#IPADDRESSES[@]}
-	for (( i = 0; i < $IPADDRESSES_len; i++ )); do
-		theip="${IPADDRESSES[$i]}"
+	IPRAY_len=${#IPRAY[@]}
+	for (( i = 0; i < $IPRAY_len; i++ )); do
+		theip="${IPRAY[$i]}"
 		if [[ "$i" -eq 0 ]]; then
 			_placeLine "  - IP Addresses:" "$theip"
 		else
@@ -336,90 +283,42 @@ geo(){
 
 firmware(){
 	currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-	userV=$(grep -ne 'version' /mnt/.overlay/user/slash/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-	upgradeV=$(grep -ne 'version' /mnt/.overlay/upgrade/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-	factoryV=$(grep -ne 'version' /mnt/.overlay/factory/wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-	#dd if=/dev/$USEDMMC of=/tmp/uboot.img seek=8 bs=1024 count=100 >> /dev/null 2>&1
-	#ubootV=$(grep -a "WigWag-U-boot-version_id" /tmp/uboot.img | tail -1 | awk '{print $2}')
-	if [[ -e /mnt/.boot/version ]]; then
-		source /mnt/.boot/version
-		bootV=$bootversion
-	else
-		bootV="unk"
-	fi
-	if [[ "$initramfsversion" = "" ]]; then
-		initV="unk"
-	else
-		initV="$initramfsversion"
-	fi
-	kernelV=$(uname -r)
-	rm -rf /tmp/uboot.img
 	currentV=${currentV%%,*}
-	userV=${userV%%,*}
-	upgradeV=${upgradeV%%,*}
-	factoryV=${factoryV%%,*}
-	if [[ "$userV" = "" ]]; then
-		userV="  ^  "
-	fi
-	if [[ "$upgradeV" = "" ]]; then
-		upgradeV="  ^  "
-	fi
-	if [[ "$factoryV" = "" ]]; then
-		factoryV="  ^  "
-	fi
-	Pschema="4Gb"
+	kernelV=$(uname -r)
 	echo "${NORM}"
 	_placeTitle "Firmware Version Information"
 	_placeLine "  - Pelion Edge Version:" "$currentV"
-	if [[ $PTYPE = 1 ]]; then
-		_placeLine "  - Overlay / Partition:" "$currentV"
-		_placeLine "  - User Partition:" "$userV"
-		_placeLine "  - Upgrade Partition:" "$upgradeV"
-		_placeLine "  - Factory Partition:" "$factoryV"
-		_placeLine "  - Partition Schema:" "$Pschema"
-	fi
 	_placeLine "  - Kernel Version:" "$kernelV"
 
 }
 
 account(){
-	if [ -d /userdata/mbed ]; then
-		SN=$serialNumber
-		DID=$deviceID
-		CLOUDURL=$gatewayServicesAddress
-		EDGECORESTATUS=$(curl -s http://localhost:9101/status)
-		AccountID=$(jsonParse $EDGECORESTATUS account-id)
-		Status=$(jsonParse $EDGECORESTATUS status)
-		_placeTitle "Account Information"
-		_placeLine "  - Serial Number:" "$SN"
-		_placeLine "  - Device ID:" "$DID"
-		_placeLine "  - Cloud Server:" "$CLOUDURL"
-		_placeLine "  - AccountID:" "$AccountID"
-		_placeLine "  - Status:" "$Status"
-	else
-		SN=$relayID
-		PAIRINGCODE=$pairingCode
-		CLOUDURL=$cloudURL
-		_placeTitle "Account Infomation"
-		_placeLine "  - Serial Number:" "$SN"
-		_placeLine "  - Pairing Code:" "$PAIRINGCODE"
-		_placeLine "  - Cloud Server:" "$CLOUDURL"
-	fi
+	_placeTitle "Account Information"
+	_placeLine "  - AccountID:" "$AccountID"
+	_placeLine "  - Device ID:" "$DID"
+	_placeLine "  - LWM2M Service:" "$URL_LWM2Mserver"
+	_placeLine "  - Gateway Service:" "$URL_gatewayServicesAddress"
+	_placeLine "  - K8s Service:" "$URL_edgek8sServicesAddress"
+	_placeLine "  - Container Service:" "$URL_containerServicesAddress"
+	_placeLine "  - Status:" "$Status"
 }
 
+
 hardware(){
-	HWV=$hardwareVersion
-	ETHERNETMAC=$(cat /sys/class/net/eth0/address)
+	Eth0Mac=$(_cat_if_exists /sys/class/net/eth0s/address)
 	local CPUCOUNT=$(grep -c processor /proc/cpuinfo)
-	local DIETEMP=$(cat /sys/devices/virtual/thermal/thermal_zone0/temp)
-	if [[ "$DIETEMP" != "" ]]; then
-		DIETEMP=$(_div1000 $DIETEMP)" C"
-	fi
 	_placeTitle "Hardware Information"
-	_placeLine "  - Hardware Version:" "$HWV"
-	_placeLine "  - Ethernet Mac:" "$ETHERNETMAC"
+	_placeLine "  - Hardware name:" "$THISMACHINE"
+	_placeLine_ifSet "  - eth0 mac:" "$Eth0Mac"
 	_placeLine "  - Physical Memory:" "$MEM MB"
-	_placeLine "  - SOC die temperature:" "$DIETEMP"
+
+	if [[ ${#TEMPRAY[@]} -gt 0 ]]; then
+		_placeLine "  - Temperatures:" " "
+		for KEY in "${!TEMPRAY[@]}"; do
+			VALUE="${TEMPRAY[$KEY]}"
+			_placeLine "    - $KEY:" "$VALUE"
+		done
+	fi
 	_placeLine "  - CPU Count:" "$CPUCOUNT"
 	_placeLine "  - CPU Stats:" "Current\tMinimum\tMaximum  "
 	for (( i = 0; i < $CPUCOUNT; i++ )); do
@@ -434,22 +333,11 @@ hardware(){
 }
 
 manufacturing(){
-	_placeTitle "Factory Manufacturing Infomation"
+	_placeTitle "Factory Manufacturing Information"
 	_placeLine "  - Build Date:" "$YEAR-$MONTH-$BATCH"
 }
 
 
-# manufacturing
-# #echo "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-# for (( x = 1; x < 42; x++ )); do
-# 	txt=""
-# 	for (( i = 1; i < $x; i++ )); do
-# 		txt="$txt".
-# 	done
-# 	_placeLine "$txt"
-# 	echo "${CYAN}-${NORM}"
-# done
-# exit
 
 _pad(){
 	pad="$1"
@@ -472,7 +360,26 @@ let PSSTOT=0;
 _memperf(){
 	name="$1"
 	pgr="$2"
-	pup="90min"
+	pid=$(pgrep -f "$2")
+	if [[ $pid != "" ]]; then
+		Share=$(_div1024 $(echo 0 $(awk '/Shared/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Priv=$(_div1024 $(echo 0 $(awk '/Private/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Swap=$(_div1024 $(echo 0 $(awk '/Swap/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Virtual=$(_div1024 $(echo 0 $(awk '/Size/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Ref=$(_div1024 $(echo 0 $(awk '/Referenced/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Pss=$(_div1024 $(echo 0 $(awk '/Pss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		Rss=$(_div1024 $(echo 0 $(awk '/Rss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
+		PSSTOT=$(bc <<< "scale=1; $PSSTOT + $Pss")
+		#_placeLine "  - $name ($pid):" "$Pss\t$Rss\t$Share\t$Priv\t$Size\t$Ref"
+		_placeLine "  - $name ($pid):" "$Pss\t$Share\t$Rss\t$Virtual"
+	fi
+}
+
+_pstate(){
+	name="$1"
+	pgr="$2"
+	sysd="$3"
+	notes="$4"
 	pid=$(pgrep -f "$2")
 	if [[ $pid != "" ]]; then
 		et=$(ps -o etime= -p "$pid");
@@ -496,48 +403,82 @@ _memperf(){
 			UPTIME="$(_pad 1 0)d ";
 		fi
 		UPTIME="$UPTIME$(_pad 1 $hours)h $(_pad 1 $mins)m "
-		Share=$(_div1024 $(echo 0 $(awk '/Shared/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Priv=$(_div1024 $(echo 0 $(awk '/Private/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Swap=$(_div1024 $(echo 0 $(awk '/Swap/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Virtual=$(_div1024 $(echo 0 $(awk '/Size/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Ref=$(_div1024 $(echo 0 $(awk '/Referenced/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Pss=$(_div1024 $(echo 0 $(awk '/Pss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		Rss=$(_div1024 $(echo 0 $(awk '/Rss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-		PSSTOT=$(bc <<< "scale=1; $PSSTOT + $Pss")
-		#_placeLine "  - $name ($pid):" "$Pss\t$Rss\t$Share\t$Priv\t$Size\t$Ref"
-		_placeLine "  - $name ($pid):" "$UPTIME\t$Pss\t$Share\t$Rss\t$Virtual"
+	fi
+	STATE=$(systemctl is-active $sysd)
+	if [[ $STATE = "inactive" && "$pid" != "" ]]; then
+		STATE=running
+	fi
+	if [[ $STATE = "inactive" ]]; then
+		STATED="${MAGENTA}$STATE${CYAN}"
+	else
+		STATED="${GREEN}$STATE${CYAN}"
+	fi
+	if [[ $STATE = "inactive" ]]; then
+		_placeLine "  - $name ($pid):" "$STATED\t$UPTIME\t$notes"
+	elif [[ $STATE = "activating" ]]; then
+		_placeLine "  - $name:" "$STATED\t$UPTIME\t$notes"
+	else
+		_placeLine "  - $name ($pid):" "$STATED\t\t$UPTIME\t$notes"
+	fi
+}
+
+procState(){
+	_placeTitle "Systemd Process State Information"
+	if [ $(whoami) != root ]; then
+		_placeLine " - Requires sudo or root access" " "
+	else	
+		_placeLine " " "Status\t\tUptime\t\tNotes"
+		_pstate "edge-core" "edge-core" "edge-core"
+		_pstate "edge-proxy" "edge-proxy" "edge-proxy"
+		_pstate "maestro" "maestro-config.yaml" "maestro"
+		_pstate "fluentbit" "td-agent-bit" "td-agent-bit"
+		_pstate "devicedb" "devicedb.yaml" "devicedb" "started via maestro"
+		_pstate "relay-term" "relay-term/src" "pelion-relay-term"
+		_pstate "edge-kubelet" "kubelet --" "kubelet"
+		_pstate "coredns" "coredns -conf" "coredns" "awaiting pods"
+		_pstate "kube-router" "kube-router --" "kube-router"
+		_pstate "docker" "dockerd" "docker"
 	fi
 }
 
 performance(){
 	_placeTitle "Key Process Memory Information (MB)"
-	_placeLine "  Stats in MB and time" "Uptime\t\tPss\tShared\tRss\tVirtual"
-	_memperf "edge-core" "edge-core"
-	_memperf "edge-proxy" "edge-proxy"
-	_memperf "maestro" "maestro-config.yaml"
-	_memperf "fluentbit" "td-agent-bit"
-	_memperf "devicedb" "devicedb.yaml"
-	_memperf "relay-term" "relay-term/src"
-	_memperf "edge-kubelet" "kubelet --root-dir"
-	_memperf "docker" "dockerd"
-	_memperf "containerd" "containerd"
+	if [ $(whoami) != root ]; then
+		_placeLine " - Requires sudo or root access" " "
+	else			
+		_placeLine "  Stats in megabytes (MB)" "Pss\tShared\tRss\tVirtual"
+		_memperf "edge-core" "edge-core"
+		_memperf "edge-proxy" "edge-proxy"
+		_memperf "maestro" "maestro-config.yaml"
+		_memperf "fluentbit" "td-agent-bit"
+		_memperf "devicedb" "devicedb.yaml"
+		_memperf "relay-term" "relay-term/src"
+		_memperf "edge-kubelet" "kubelet --"
+		_memperf "coredns" "coredns -conf"
+		_memperf "kube-router" "kube-router --"
+		_memperf "docker" "dockerd"
+	fi
 }
 
 memory(){
 	_placeTitle "System Memory"
-	_placeLine "  - Used/Total:" "$USED/$MEM MB\t($UMP%)"
-	UMP=$(_percentage $PSSTOT $MEM)
-	_placeLine "  - Key Processes:" "$PSSTOT MB\t($UMP%) "
-	UMP=$(_percentage $volatilePSS $MEM)
-	_placeLine "  - Volatile logging:" "$volatilePSS MB\t\t($UMP%)"
-	r2=$(bc <<< "scale=1; $MEM - $USED")
-	r2=$(bc <<< "scale=1; $AVAILABLE - $r2 ")
-	remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
-	remainder=$(bc <<< "scale=1; $USED - $remainder")
-	UMP=$(_percentage $remainder $MEM )
+	if [ $(whoami) != root ]; then
+		_placeLine " - Requires sudo or root access" " "
+	else
+		_placeLine "  - Used/Total:" "$USED/$MEM MB\t($UMP%)"
+		UMP=$(_percentage $PSSTOT $MEM)
+		_placeLine "  - Key Processes:" "$PSSTOT MB\t($UMP%) "
+		UMP=$(_percentage $volatilePSS $MEM)
+		_placeLine "  - Volatile logging:" "$volatilePSS MB\t\t($UMP%)"
+		r2=$(bc <<< "scale=1; $MEM - $USED")
+		r2=$(bc <<< "scale=1; $AVAILABLE - $r2 ")
+		remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
+		remainder=$(bc <<< "scale=1; $USED - $remainder")
+		UMP=$(_percentage $remainder $MEM )
 	#_placeLine "  - Other:" "$remainder MB\t\t($UMP%)"
 	UMP=$(_percentage $AVAILABLE $MEM)
 	_placeLine "  - True Available Mem:" "$AVAILABLE MB\t\t($UMP%)"
+fi
 }
 
 
@@ -554,34 +495,24 @@ about(){
 	_placeHeader "About"
 	_placeTitle "System Memory"
 	_placeAbout "  Read about memory allocation:" "http://www.linuxatemyram.com/"
-	_placeAbout "  - Physcial Memory:" "How much installed physical ram the system has"
-	_placeAbout "  - Memory Useage:" "MemoryUsed/MemoryAvaiable (as a percentage)"
+	_placeAbout "  - Physical Memory:" "How much installed physical ram the system has"
+	_placeAbout "  - Memory Usage:" "MemoryUsed/MemoryAvaiable (as a percentage)"
 	_placeAbout "  - True Available Mem:" "How much mem can go to processes (minus cache)"
 	_placeTitle "Process Memory"
 	_placeAbout "  Read about process memory:" "https://goo.gl/wvUhBi"
 	_placeAbout "  - Pss:" " Proportional Set Size, overall memory indicator (Rss adjusted for sharing)"
-	_placeAbout "  - Rss:" " resident memory useage, all memory the process ueses (includes shared mem)"
+	_placeAbout "  - Rss:" " resident memory usage, all memory the process uses (includes shared mem)"
 	_placeAbout "  - Shared:" " memory that this process shares with other processes"
-	_placeAbout "  - Privte:" " private memory used by this process, check for mem leaks here"
+	_placeAbout "  - Private:" " private memory used by this process, check for mem leaks here"
 	_placeAbout "  - Virtual:" "total virtual space for the process"
-	_placeAbout "  - Referenced: " " ammount of memory current marked as referenced or accessed"
+	_placeAbout "  - Referenced: " " amount of memory current marked as referenced or accessed"
 }
 
-showthesticker(){
-	if [ -d /userdata/mbed]; then
-		_placeTitle "Factory Label"
-		d="{\"EID\":\"$enrollmentID\"}"
-		qrcode-terminal -l "L" -f "black" -b "white" "$d"
-	else
-		_placeTitle "Factory Label"
-		d="{\"ID\":\"$relayID\",\"PC\":\"$pairingCode\"}"
-		qrcode-terminal -l "L" -f "black" -b "white" "$d"
-	fi
-}
 
 main(){
 	load_statistics
-	idmachine
+	set_OS_vars
+	set_machine_vars
 	if [[ $about -eq 1 ]]; then
 		about
 	else
@@ -593,26 +524,104 @@ main(){
 		account
 		#manufacturing
 		if [[ $memory -eq 1 ]]; then
+			procState
 			performance
 			memory
-		fi
-		if [[ $showsticker -eq 1 ]]; then
-			showthesticker 
 		fi
 	fi
 }
 
-
+#-----------------------------------------------------------------------------------------------------#
+#                                            ____ _     ___                                           #
+#                                           / ___| |   |_ _|                                          #
+#                                          | |   | |    | |                                           #
+#                                          | |___| |___ | |                                           #
+#                                           \____|_____|___|                                          #
+#                                                                                                     #
+#                                         argument processor                                          #
+#-----------------------------------------------------------------------------------------------------#
 declare -A hp=(
 	[description]="Displays vital system information statistics and process data"
-	[useage]="-options"
+	[usage]="-options"
 	[a]="about"
 	[h]="help"
 	[m]="memory information added"
-	[s]="show qr sticker at the end"
-	[r]="regenerate gateway statics"
 	[e1]="\t${BOLD}${UND}displays vital system information and process data${NORM}\n\t\t$0${NORM}\n"
 	)
+
+
+
+#/	Desc:	Gathers all the keys from the menu system and builds a proper string for getopts	
+#/	Out:	echo - switch_conditions
+#/	Expl:	switch_conditions=$(COMMON_MENU_SWITCH_GRAB)
+COMMON_MENU_SWITCH_GRAB(){
+	#shellcheck disable=SC2154
+	for KEY in "${!hp[@]}"; do
+		:
+		VALUE=${hp[$KEY]}
+		numcheck="${KEY:1:1}"
+		skip=false
+		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
+			skip=true
+		fi
+		double=""
+		if [[ ${#KEY} -gt 1 ]]; then
+			double=":"
+			dKEY="${KEY:0:1}"
+		else
+			dKEY=$KEY
+		fi
+		if [[ $KEY != "description" && $KEY != "usage" && $skip != true ]]; then
+			myline=$myline$dKEY$double
+		fi
+	done
+	echo "$myline"
+} #end_COMMON_MENU_SWITCH_GRAB
+
+#/	Desc:	Generates a menu based on a named template system
+#/  Global: declare -A hp=() associative array of switches
+#/			expects an associative array named hp.
+#/			hp nomenclature hp[x] where x represents a switch
+#/			and where hp[xx] represents a switch and variable
+#/	$1:		[error text]  OPTIONAL
+#/	$2:		name1
+#/	$3:		name1
+#/	Out:	a help text for the cli
+#/	Expl:	COMMON_MENU_HELP
+COMMON_MENU_HELP(){
+	if [[ $1 != "" ]]; then
+		echo -e "\nERROR: ${REV}${BOLD}$1${NORM}"
+	fi
+	echo -e \\n"Help documentation for ${BOLD}$0${NORM}"
+	echo -e "${hp[description]}"
+	echo -e "----------------------------------------------------------------------------------------"
+	echo -e "${BOLD}Basic usage:${NORM}${BOLD} $0 ${NORM} ${hp[usage]}"
+	etext=""
+	for KEY in "${!hp[@]}"; do
+		:
+		VALUE=${hp[$KEY]}
+		numcheck="${KEY:1:1}"
+		skip=false
+		if [[ "$numcheck" =~ ^[0-9]+$ ]]; then
+			skip=true
+			if [[ ${KEY:0:1} = "e" ]]; then
+				etext=$etext"${UND}${BOLD} Example:${NORM} $VALUE\n"
+			fi
+		fi
+		if [[ ${#KEY} -gt 1 ]]; then
+			dKEY="${KEY:0:1}"
+		else
+			dKEY=$KEY
+		fi
+		if [[ $KEY != "description" && $KEY != "usage" && $skip != true ]]; then
+			switches=$switches"${BOLD}-$dKEY${NORM} $VALUE\n"
+		fi
+	done  
+	echo -e "$switches"  | sort -n -k1
+	echo -e "$etext\n"
+	exit 1
+} #end_COMMON_MENU_HELP
+
 
 argprocessor(){
 	switch_conditions=$(COMMON_MENU_SWITCH_GRAB)
@@ -623,10 +632,6 @@ argprocessor(){
 			h) COMMON_MENU_HELP; exit; ;;
 			#
 			m) memory=1; ;;
-			#
-			r) regenerateStats=1; ;;
-			#
-			s) showsticker=1; ;;
 			#
 			\?) echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed.";COMMON_MENU_HELP;exit; ;;
 			#
