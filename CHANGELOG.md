@@ -1,3 +1,14 @@
+## Pelion Edge utilities 2.0.9
+1. [info] Read the hardware version from /proc/device-tree/model
+1. [info] Correctly read the CPU temperature
+
+
+## Pelion Edge utilities 2.0.8
+1. [info] adds temperature for uzeg
+1. [info] direct comms with edge-core
+1. [info] detects need for sudo and informs user when using -m case
+1. [info] new process status section
+
 ## Pelion Edge utilities 2.0.7
 
 1. [identity] Added support in address derviation for a variant of UDP/TCP LwM2M domain.
