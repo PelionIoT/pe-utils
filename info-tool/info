@@ -34,7 +34,7 @@ WHITE="$(tput setaf 7)"
 ERROR="${REV}Error:${NORM}"
 version="1.9"
 LogToTerm=1
-loglevel=debug;
+loglevel=info;
 
 
 THISMACHINE="generic"
@@ -47,13 +47,12 @@ _debug(){
 
 #This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
 STORAGE=EDGE_DATA
-STORAGE=/userdata
 set_storage_locations(){
 	if [[ -e $STORAGE ]]; then
 		RFILE=$STORAGE/info/relaystatics.sh
 		IFILE=$STORAGE/edge_gw_config/identity.json
 	else
-		RFILE=/wigwag/system/lib/bash/relaystatics.sh
+		RFILE=/userdata/info/relaystatics.sh
 		IFILE=/userdata/edge_gw_config/identity.json
 	fi
 }
@@ -80,12 +79,14 @@ set_machine_vars(){
 	declare -Ag TEMPRAY
 	if [[ $THISMACHINE = "imx8mmevk" ]]; then
 		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
-		CPUTEMP="HI"
+	TEMPRAY["thermal zone0"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone0/temp) C" 
 	elif [[ $THISMACHINE = "uz3eg-iocc" ]]; then
 		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
 		TEMPRAY["LPD near the APU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw) C"
 		TEMPRAY["FPD near the RPU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp1_remote_temp_raw) C"
 		TEMPRAY["PL sensor"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp2_pl_temp_raw) C"
+	elif [[ $THISMACHINE = "raspberrypi3-64" ]]; then
+		TEMPRAY["thermal zone0"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone0/temp) C" 
 	else
 		ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
 		#CPUTEMP=$(cat /sys/devices/virtual/thermal/thermal_zone0/temp)
@@ -283,11 +284,24 @@ geo(){
 
 firmware(){
 	currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
+	local bito=$(getconf LONG_BIT)
 	currentV=${currentV%%,*}
 	kernelV=$(uname -r)
 	echo "${NORM}"
 	_placeTitle "Firmware Version Information"
 	_placeLine "  - Pelion Edge Version:" "$currentV"
+	_placeLine "    - edge-core" "$(/wigwag/mbed/edge-core -v | awk -F '-' '{print $1}')"
+	# _placeLine "    - maestro" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - fluentbit" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - devicedb" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - relay-term" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - edge-kubelet" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - kube-router" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - coredns" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - docker" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	_placeLine "  - OS:" "$OS ($bito bit)"
+	_placeLine "  - OS Version:" "$OSVERSION"
+	_placeLine "  - OS Machine:" "$THISMACHINE"
 	_placeLine "  - Kernel Version:" "$kernelV"
 
 }
@@ -307,8 +321,10 @@ account(){
 hardware(){
 	Eth0Mac=$(_cat_if_exists /sys/class/net/eth0s/address)
 	local CPUCOUNT=$(grep -c processor /proc/cpuinfo)
+	local CPUTYPE=
+	local HWV=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))
 	_placeTitle "Hardware Information"
-	_placeLine "  - Hardware name:" "$THISMACHINE"
+	_placeLine_ifSet "  - Hardware name:" "$HWV"
 	_placeLine_ifSet "  - eth0 mac:" "$Eth0Mac"
 	_placeLine "  - Physical Memory:" "$MEM MB"
 
@@ -320,7 +336,7 @@ hardware(){
 		done
 	fi
 	_placeLine "  - CPU Count:" "$CPUCOUNT"
-	_placeLine "  - CPU Stats:" "Current\tMinimum\tMaximum  "
+	_placeLine "  - CPU Stats:" "${UND}Current${CYAN}\t\tMinimum\t\tMaximum  "
 	for (( i = 0; i < $CPUCOUNT; i++ )); do
 		curspeed=$(cat /sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq)
 		maxspeed=$(cat /sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq)
@@ -328,7 +344,12 @@ hardware(){
 		curspeed=$(_div1000 $curspeed)"Mhz"
 		maxspeed=$(_div1000 $maxspeed)"Mhz"
 		minspeed=$(_div1000 $minspeed)"Mhz"
-		_placeLine "    - CPU$i:" "$curspeed\t$minspeed\t$maxspeed"
+		maxspeed_len=${#maxspeed}
+		if [[ $maxspeed_len -ge 9 ]]; then
+			_placeLine "    - CPU$i:" "$curspeed\t$minspeed\t$maxspeed"
+		else
+			_placeLine "    - CPU$i:" "$curspeed\t\t$minspeed\t\t$maxspeed"
+		fi
 	done
 }
 
@@ -427,7 +448,7 @@ procState(){
 	if [ $(whoami) != root ]; then
 		_placeLine " - Requires sudo or root access" " "
 	else	
-		_placeLine " " "Status\t\tUptime\t\tNotes"
+		_placeLine " " "${UND}Status\t\t   Uptime\t\tNotes"
 		_pstate "edge-core" "edge-core" "edge-core"
 		_pstate "edge-proxy" "edge-proxy" "edge-proxy"
 		_pstate "maestro" "maestro-config.yaml" "maestro"
@@ -446,7 +467,7 @@ performance(){
 	if [ $(whoami) != root ]; then
 		_placeLine " - Requires sudo or root access" " "
 	else			
-		_placeLine "  Stats in megabytes (MB)" "Pss\tShared\tRss\tVirtual"
+		_placeLine "  Stats in megabytes (MB)" "${UND}Pss\tShared\tRss\tVirtual"
 		_memperf "edge-core" "edge-core"
 		_memperf "edge-proxy" "edge-proxy"
 		_memperf "maestro" "maestro-config.yaml"
@@ -465,19 +486,20 @@ memory(){
 	if [ $(whoami) != root ]; then
 		_placeLine " - Requires sudo or root access" " "
 	else
-		_placeLine "  - Used/Total:" "$USED/$MEM MB\t($UMP%)"
+		_placeLine "  " "${UND}Totals\t\tPercentage"
+		_placeLine "  - Used/Total:" "$USED/$MEM MB\t$UMP%"
 		UMP=$(_percentage $PSSTOT $MEM)
-		_placeLine "  - Key Processes:" "$PSSTOT MB\t($UMP%) "
+		_placeLine "  - Key Processes:" "$PSSTOT MB\t$UMP% "
 		UMP=$(_percentage $volatilePSS $MEM)
-		_placeLine "  - Volatile logging:" "$volatilePSS MB\t\t($UMP%)"
+		_placeLine "  - Volatile logging:" "$volatilePSS MB\t\t$UMP%"
 		r2=$(bc <<< "scale=1; $MEM - $USED")
 		r2=$(bc <<< "scale=1; $AVAILABLE - $r2 ")
 		remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
 		remainder=$(bc <<< "scale=1; $USED - $remainder")
 		UMP=$(_percentage $remainder $MEM )
-	#_placeLine "  - Other:" "$remainder MB\t\t($UMP%)"
+	#_placeLine "  - Other:" "$remainder MB\t\t$UMP%"
 	UMP=$(_percentage $AVAILABLE $MEM)
-	_placeLine "  - True Available Mem:" "$AVAILABLE MB\t\t($UMP%)"
+	_placeLine "  - True Available Mem:" "$AVAILABLE MB\t\t$UMP%"
 fi
 }
 
