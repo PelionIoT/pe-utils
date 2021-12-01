@@ -283,22 +283,22 @@ geo(){
 }
 
 firmware(){
-	currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
+	currentV=$(grep -ne 'version' EDGE_ETC/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
 	local bito=$(getconf LONG_BIT)
 	currentV=${currentV%%,*}
 	kernelV=$(uname -r)
 	echo "${NORM}"
 	_placeTitle "Firmware Version Information"
 	_placeLine "  - Pelion Edge Version:" "$currentV"
-	_placeLine "    - edge-core" "$(/wigwag/mbed/edge-core -v | awk -F '-' '{print $1}')"
-	# _placeLine "    - maestro" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - fluentbit" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - devicedb" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - relay-term" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - edge-kubelet" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - kube-router" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - coredns" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-	# _placeLine "    - docker" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
+	_placeLine "    - edge-core" "$(EDGE_BIN/edge-core -v | awk -F '-' '{print $1}')"
+	# _placeLine "    - maestro" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - fluentbit" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - devicedb" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - relay-term" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - edge-kubelet" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - kube-router" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - coredns" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
+	# _placeLine "    - docker" "$(EDGE_BIN/maestro -version | awk -F '-' '{print $1}')"
 	_placeLine "  - OS:" "$OS ($bito bit)"
 	_placeLine "  - OS Version:" "$OSVERSION"
 	_placeLine "  - OS Machine:" "$THISMACHINE"
