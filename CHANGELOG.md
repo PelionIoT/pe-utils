@@ -1,3 +1,7 @@
+## Pelion Edge utilities 2.0.10
+1. [info] Fix geolocation information printing for multi-word cases (like New York).
+1. [info] Remove wigwag directory paths
+
 ## Pelion Edge utilities 2.0.9
 1. [info] Read the hardware version from /proc/device-tree/model
 1. [info] Correctly read the CPU temperature
