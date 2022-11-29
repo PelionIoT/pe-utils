@@ -16,6 +16,7 @@ L4T=$temp/layer4.txt
 VERBOSE=0
 DONTDELETE=0
 
+port=5684
 NORM="\u001b[0m"
 #BOLD="\u001b[1m"
 #REV="\u001b[7m"
@@ -51,8 +52,8 @@ verbose() {
 }
 
 test_bootstrap() {
-    verbose "Test bootstrap server connection"
-    verbose "---------------------------------"
+    verbose "Test bootstrap server connection (port $port)"
+    verbose "--------------------------------------------"
     verbose "Uses openssl to connect to bootstrap server using device credentials."
     verbose "Write openssl output to $bootT."
     echo | openssl s_client -CAfile credentials/bootstrap.pem -key credentials/device01_key.pem -cert credentials/device01_cert.pem -connect tcp-bootstrap.us-east-1.mbedcloud.com:5684 2>"$bootT" >"$bootT"
@@ -65,9 +66,9 @@ test_bootstrap() {
     # print result
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
     if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to bootstrap server"
+        clihelp::success "TLS to bootstrap server (port $port)"
     else
-        clihelp::failure "TLS to bootstrap server"
+        clihelp::failure "TLS to bootstrap server (port $port)"
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
@@ -75,11 +76,11 @@ test_bootstrap() {
 }
 
 test_lwm2m() {
-    verbose "Test LwM2M server connection"
-    verbose "----------------------------"
-    verbose "Uses openssl to connect to lwm2m server using device credentials."
+    verbose "Test LwM2M server connection (port $port)"
+    verbose "----------------------------------------"
+    verbose "Uses openssl to connect to LwM2M server using device credentials."
     verbose "Write openssl output to $LWT."
-    echo | openssl s_client -CAfile credentials/lwm2m.pem -key credentials/device01_key.pem -cert credentials/device01_cert.pem -connect lwm2m.us-east-1.mbedcloud.com:5684 2>"$LWT" >"$LWT"
+    echo | openssl s_client -CAfile credentials/lwm2m.pem -key credentials/device01_key.pem -cert credentials/device01_cert.pem -connect lwm2m.us-east-1.mbedcloud.com:"$port" 2>"$LWT" >"$LWT"
     # get openssl return code
     RESULT=$(grep "Verify return code" "$LWT")
 
@@ -91,9 +92,9 @@ test_lwm2m() {
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
 
     if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to LwM2M server"
+        clihelp::success "TLS to LwM2M server (port $port)"
     else
-        clihelp::failure "TLS to LwM2M server"
+        clihelp::failure "TLS to LwM2M server (port $port)"
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
@@ -117,20 +118,26 @@ test_L3() {
 test_L4() {
     _nc() {
         if [[ $(nc -v -w 1 "$1" "$2" >>"$L4T" 2>&1) -eq 0 ]]; then
-            clihelp::success "netcat $1"
+            clihelp::success "netcat $1 $2"
         else
-            clihelp::failure "netcat $1"
+            clihelp::failure "netcat $1 $2"
         fi
     }
-    verbose "Test Layer 4 (requires nc)"
-    verbose "--------------------------"
+    verbose "Test Layer 4 (requires nc), port 443 and 5684"
+    verbose "---------------------------------------------"
     _nc api.snapcraft.io 443
+    _nc bootstrap.us-east-1.mbedcloud.com 443
+    _nc bootstrap.us-east-1.mbedcloud.com 5684
     _nc lwm2m.us-east-1.mbedcloud.com 443
+    _nc lwm2m.us-east-1.mbedcloud.com 5684
 }
 
 main() {
     test_L3
     test_L4
+    test_bootstrap
+    test_lwm2m
+    port=443
     test_bootstrap
     test_lwm2m
     if [[ "$DONTDELETE" -eq 0 ]]; then
