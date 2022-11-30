@@ -263,13 +263,13 @@ geo(){
 	_placeTitle "Geographic Information"
 	out=$(curl -m 1 -s ipinfo.io)
 	if [[ "$out" != *"timed"* ]]; then
-		PUBIP=$(echo "$out" | grep ip\" | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		CITY=$(echo "$out" | grep city | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		REGION=$(echo "$out" | grep region | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		COUNTRY=$(echo "$out" | grep country | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		ZIP=$(echo "$out" | grep postal | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		LL=$(echo "$out" | grep loc | awk '{print $2}' | sed -e 's/^"//' -e 's/",$//' -e 's/"$//')
-		ORG=$(echo "$out" | grep org | sed -e 's/"org"://'| sed -e 's/^   "//' -e 's/",$//' -e 's/"$//')
+		PUBIP=$(echo "$out" | jq -r ".ip?")
+		CITY=$(echo "$out" | jq -r ".city?")
+		REGION=$(echo "$out" | jq -r ".region")
+		COUNTRY=$(echo "$out" | jq -r ".country?")
+		ZIP=$(echo "$out" | jq -r ".postal?")
+		LL=$(echo "$out" | jq -r ".loc?")
+		ORG=$(echo "$out" | jq -r ".org?")
 		_placeLine "  - Public IP:" "$PUBIP"
 		_placeLine "  - City:" "$CITY"
 		_placeLine "  - Region:" "$REGION"
