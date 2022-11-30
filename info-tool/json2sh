@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+# Copyright (c) 2022, Izuma Networks
 # Copyright (c) 2018, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -18,7 +20,7 @@
 source json.sh
 
 if [[ $1 = "" || $2 = "" ]]; then
-	echo "USEAGE $0 <in.json> <out.sh>"
-	exit
+    echo "USEAGE $0 <in.json> <out.sh>"
+    exit
 fi
 json_toShFile $@
