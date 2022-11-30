@@ -16,27 +16,27 @@
 # limitations under the License.
 
 cli_log() {
-	script_name=${0##*/}
-	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-	echo "$timestamp $script_name LOG $1"
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name LOG $1"
 }
 
 cli_error() {
-	script_name=${0##*/}
-	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-	echo "$timestamp $script_name ERROR $1"
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name ERROR $1"
 }
 
 cli_warn() {
-	script_name=${0##*/}
-	timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-	echo "$timestamp $script_name WARN $1"
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name WARN $1"
 }
 
 cli_debug() {
-	if [ ! -z $VERBOSE ]; then
-		script_name=${0##*/}
-		timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-		echo "$timestamp $script_name DEBUG $1"
-	fi
+    if [ ! -z $VERBOSE ]; then
+        script_name=${0##*/}
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        echo "$timestamp $script_name DEBUG $1"
+    fi
 }
