@@ -1,6 +1,9 @@
-## Pelion Edge utilities 2.0.10
+## Pelion Edge utilities 2.0.11
 1. [info] Fix geolocation information printing for multi-word cases (like New York).
-1. [info] Remove wigwag directory paths
+1. [common] Convert all tabs to spaces in script files.
+
+## Pelion Edge utilities 2.0.10
+1. [fw-tools] Tool for checking Izuma cloud connections (in case of firewalls blocking etc.)
 
 ## Pelion Edge utilities 2.0.9
 1. [info] Read the hardware version from /proc/device-tree/model

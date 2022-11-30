@@ -7,6 +7,8 @@
 #
 # Credential files will not be found otherwise.
 #
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
 bootT=$temp/bootstrap.txt
 LWT=$temp/test-lwm2m.txt
@@ -56,7 +58,7 @@ test_bootstrap() {
     verbose "--------------------------------------------"
     verbose "Uses openssl to connect to bootstrap server using device credentials."
     verbose "Write openssl output to $bootT."
-    echo | openssl s_client -CAfile credentials/bootstrap.pem -key credentials/device01_key.pem -cert credentials/device01_cert.pem -connect tcp-bootstrap.us-east-1.mbedcloud.com:5684 2>"$bootT" >"$bootT"
+    echo | openssl s_client -CAfile "$CRED_DIR/bootstrap.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect tcp-bootstrap.us-east-1.mbedcloud.com:5684 2>"$bootT" >"$bootT"
 
     # get openssl return code
     RESULT=$(grep 'Verify return code' "$bootT")
@@ -80,7 +82,7 @@ test_lwm2m() {
     verbose "----------------------------------------"
     verbose "Uses openssl to connect to LwM2M server using device credentials."
     verbose "Write openssl output to $LWT."
-    echo | openssl s_client -CAfile credentials/lwm2m.pem -key credentials/device01_key.pem -cert credentials/device01_cert.pem -connect lwm2m.us-east-1.mbedcloud.com:"$port" 2>"$LWT" >"$LWT"
+    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect lwm2m.us-east-1.mbedcloud.com:"$port" 2>"$LWT" >"$LWT"
     # get openssl return code
     RESULT=$(grep "Verify return code" "$LWT")
 
