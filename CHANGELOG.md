@@ -1,4 +1,7 @@
-## Pelion Edge utilities 2.0.11
+## Izuma Edge utilities 2.0.12
+1. [info] Update version information and tool name (Relay -> Edge).
+
+## Izuma Edge utilities 2.0.11
 1. [info] Fix geolocation information printing for multi-word cases (like New York).
 1. [common] Convert all tabs to spaces in script files.
 

@@ -32,7 +32,7 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 ERROR="${REV}Error:${NORM}"
-version="1.9"
+version="2.0.12"
 LogToTerm=1
 loglevel=info;
 
@@ -506,7 +506,7 @@ fi
 
 
 Stats(){
-    _placeHeader "Relay Information utility version $version"
+    _placeHeader "Edge Information utility version $version"
 }
 
 _placeAbout(){
