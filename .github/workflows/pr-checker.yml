@@ -11,3 +11,5 @@ jobs:
       - run: fw-tools/testnet.sh
       - run: shellcheck info-tool/info
       - run: info-tool/info
+      - run: git clone https://github.com/PelionIoT/scripts-internal.git
+      - run: scripts-internal/pysh-check/pysh-check.sh --workdir .
