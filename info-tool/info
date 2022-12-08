@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright (c) 2022 Izuma Networks
 # Copyright (c) 2020-2021, Pelion IoT and affiliates. 
 # Copyright (c) 2018-2020, Arm Limited and affiliates.
 # 
@@ -19,25 +20,25 @@
 #https://github.com/longsleep/build-pine64-image/blob/master/simpleimage/platform-scripts/pine64_health.sh
 #---------------Configuration-------------#
 
+# No, you cannot export the colors - printing goes crazy if you do that.
 NORM="$(tput sgr0)"
 BOLD="$(tput bold)"
 REV="$(tput smso)"
 UND="$(tput smul)"
-BLACK="$(tput setaf 0)"
-RED="$(tput setaf 1)"
+#BLACK="$(tput setaf 0)"
+#RED="$(tput setaf 1)"
 GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
-BLUE="$(tput setaf 4)"
+#BLUE="$(tput setaf 4)"
 MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
-WHITE="$(tput setaf 7)"
-ERROR="${REV}Error:${NORM}"
+#WHITE="$(tput setaf 7)"
+#ERROR="${REV}Error:${NORM}"
 version="2.0.12"
-LogToTerm=1
+export LogToTerm=1
 loglevel=info;
 
-
-THISMACHINE="generic"
+THISMACHINE=$(uname -m)
 
 _debug(){
     if [[ $loglevel = "debug" ]]; then
@@ -48,9 +49,9 @@ _debug(){
 #This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
 STORAGE=EDGE_DATA
 set_storage_locations(){
-    if [[ -e $STORAGE ]]; then
-        RFILE=$STORAGE/info/relaystatics.sh
-        IFILE=$STORAGE/edge_gw_config/identity.json
+    if [[ -e "$STORAGE" ]]; then
+        RFILE="$STORAGE/info/relaystatics.sh"
+        IFILE="$STORAGE/edge_gw_config/identity.json"
     else
         RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
@@ -60,60 +61,76 @@ set_storage_locations
 
 #This function sets global variables that the info command expects to be set on a OS basis.  Yocto OS is implemented.  Extend this function to implement other OS's
 set_OS_vars(){
-    OS="unknown"
+    OS=$(uname)
     OSVERSION="unknown"
+    # shellcheck disable=SC1091
     source /etc/os-release
     if [[ $LMP_MACHINE != "" ]]; then
         OS="LMP"
+    fi
+    if [[ $PRETTY_NAME != "" ]]; then
         OSVERSION="$PRETTY_NAME"
     fi
 }
 
 #all variables that are hardware dependent
 set_machine_vars(){
+    # shellcheck disable=SC1091
     source /etc/os-release
     if [[ $LMP_MACHINE != "" ]]; then
         THISMACHINE="$LMP_MACHINE"
     fi
     ALLIPS=""
     declare -Ag TEMPRAY
-    if [[ $THISMACHINE = "imx8mmevk" ]]; then
-        ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
-    TEMPRAY["thermal zone0"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone0/temp) C" 
-    elif [[ $THISMACHINE = "uz3eg-iocc" ]]; then
-        ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+    # Xilinx UZ-targets have non-standard temperature zones
+    if [[ -e "/sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw" ]]; then
         TEMPRAY["LPD near the APU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw) C"
-        TEMPRAY["FPD near the RPU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp1_remote_temp_raw) C"
-        TEMPRAY["PL sensor"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp2_pl_temp_raw) C"
-    elif [[ $THISMACHINE = "raspberrypi3-64" ]]; then
-        TEMPRAY["thermal zone0"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone0/temp) C" 
-    else
-        ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
-        #CPUTEMP=$(cat /sys/devices/virtual/thermal/thermal_zone0/temp)
     fi
+    if [[ -e "/sys/bus/iio/devices/iio:device0/in_temp1_remote_temp_raw" ]]; then
+        TEMPRAY["FPD near the RPU"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp1_remote_temp_raw) C"
+    fi
+    if [[ -e "/sys/bus/iio/devices/iio:device0/in_temp2_pl_temp_raw" ]]; then
+        TEMPRAY["PL sensor"]="$(awk '{ printf "%.1f\n", ((($1 * 509.314)/65536.0)-280.23) }' < /sys/bus/iio/devices/iio:device0/in_temp2_pl_temp_raw) C"
+    fi
+
+    # Pretty much everything else should have common cpu-temp, 3 zones covers a pretty big setup already
+    if [[ -e "/sys/class/thermal/thermal_zone0/temp" ]]; then
+        TEMPRAY["thermal zone0"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone0/temp) C"
+    fi
+    if [[ -e "/sys/class/thermal/thermal_zone1/temp" ]]; then
+        TEMPRAY["thermal zone1"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone1/temp) C"
+    fi
+    if [[ -e "/sys/class/thermal/thermal_zone2/temp" ]]; then
+        TEMPRAY["thermal zone2"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone2/temp) C"
+    fi
+    ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
 }
 
 load_statistics(){
-    if [[ -e $RFILE ]]; then
-        source $RFILE
+    if [[ -e "$RFILE" ]]; then
+        # shellcheck disable=SC1090
+        source "$RFILE"
     fi
     EDGECORESTATUS=$(curl -s localhost:9101/status);
     if [[ $EDGECORESTATUS = "" ]]; then
         Status="${MAGENTA}offline${NORM}"
     elif [[ $AccountID = "" ]]; then
-        AccountID=$(echo $EDGECORESTATUS | jq -r '."account-id"')
-        Status=$(echo $EDGECORESTATUS | jq -r '."status"')
-        DID=$(echo $EDGECORESTATUS | jq -r '."endpoint-name"')
-        URL_LWM2Mserver=$(echo $EDGECORESTATUS | jq -r '."lwm2m-server-uri"'| awk -F "?" '{print $1}')
-        if [[ -e $IFILE ]]; then
-            URL_gatewayServicesAddress=$(cat $IFILE | jq -r '."gatewayServicesAddress"')
-            URL_edgek8sServicesAddress=$(cat $IFILE | jq -r '."edgek8sServicesAddress"')
-            URL_containerServicesAddress=$(cat $IFILE | jq -r '."containerServicesAddress"')
+        AccountID=$(echo "$EDGECORESTATUS" | jq -r '."account-id"')
+        Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
+        DID=$(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"')
+        URL_LWM2Mserver=$(echo "$EDGECORESTATUS" | jq -r '."lwm2m-server-uri"'| awk -F "?" '{print $1}')
+        if [[ -e "$IFILE" ]]; then
+            # shellcheck disable=SC2002
+            URL_gatewayServicesAddress=$(cat "$IFILE" | jq -r '."gatewayServicesAddress"')
+            # shellcheck disable=SC2002
+            URL_edgek8sServicesAddress=$(cat "$IFILE" | jq -r '."edgek8sServicesAddress"')
+            # shellcheck disable=SC2002
+            URL_containerServicesAddress=$(cat "$IFILE" | jq -r '."containerServicesAddress"')
         fi
     else
-        Status=$(echo $EDGECORESTATUS | jq -r '."status"')
+        Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
     fi
-    if [[ ! -e $RFILE && $URL_gatewayServicesAddress != "" ]]; then
+    if [[ -z "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
         { 
             echo "AccountID=\"$AccountID\""
             echo "DID=\"$DID\""
@@ -130,6 +147,7 @@ load_statistics(){
 _exec(){
     local cmd="$1"
     out=$(eval "$cmd" >> /dev/null 2>&1)
+    # shellcheck disable=SC2181
     if [[ $? -eq 0 ]]; then
         echo "$out"
     fi
@@ -193,7 +211,7 @@ _percentage(){
     if [[ $1 = 0 || $1 = "" || $2 = 0 || $2 = "" ]]; then
         echo "0"
     else
-        echo $(bc <<< "scale=2; $1*100/$2")
+        bc <<< "scale=2; ""$1""*100/""$2"
     fi
 }
 
@@ -205,42 +223,46 @@ _cat_if_exists(){
     fi
 }
 
-
+PSSTOT=0;
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 MEM=$(_div1000b "$MEM")
 AVAILABLE=$(free -m | awk 'NR==2{printf $7}')
 #USED=$(free -m | awk 'NR==2{printf $3}')
 USED=$(bc <<< "scale=1; $MEM - $AVAILABLE");
 #remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
-UMP=$(_percentage $USED $MEM)
+UMP=$(_percentage "$USED" "$MEM")
 #UMP=$(bc <<< "scale=2; $USED*100/$MEM")
 volatilePSS=$(df -h | grep volatile | awk '{print $3}');
-if [[ $volatilePSS = *"K" ]]; then
-    volatilePSS=1
-else
-    volatilePSS=${volatilePSS::-1}
-    if [[ $volatilePSS = "" ]]; then
-        volatilePSS=0
+if [[ "$volatilePSS" != "" ]]; then
+    if [[ "$volatilePSS" = *"K" ]]; then
+        volatilePSS=1
+    else
+        volatilePSS=${volatilePSS::-1}
+        if [[ "$volatilePSS" = "" ]]; then
+            volatilePSS=0
+        fi
     fi
+else
+    volatilePSS=0
 fi
 
 system() {    
-    let upSeconds=$(cat /proc/uptime | cut -d ' ' -f1 | cut -d '.' -f1);
-    let secs=$((${upSeconds}%60))
-    let mins=$((${upSeconds}/60%60))
-    let hours=$((${upSeconds}/3600%24))
-    let days=$((${upSeconds}/86400))
-    if [[ "${days}" -ne "0" ]]; then
-        UPTIME="${days}d ";
+    upSeconds=$(cut -d ' ' -f1 "/proc/uptime"  | cut -d '.' -f1);
+    secs=$((upSeconds%60))
+    mins=$((upSeconds/60%60))
+    hours=$((upSeconds/3600%24))
+    days=$((upSeconds/86400))
+    if [[ "$days" -ne "0" ]]; then
+        UPTIME="$days d ";
     fi
     UPTIME="$UPTIME${hours}h ${mins}m ${secs}s"
     USERS="$(who | cut -d ' ' -f1 | sort | uniq | wc -l) users"
     LOAD="$(cat /proc/loadavg)"
-    MIN1="$(echo $LOAD | awk '{ print $1}')"
-    MIN5="$(echo $LOAD | awk '{ print $2}')"
-    MIN15="$(echo $LOAD | awk '{ print $3}')"
-    TASKS="$(echo $LOAD | awk '{ print $4}')"
-    readarray -t IPRAY <<< $ALLIPS
+    MIN1="$(echo "$LOAD" | awk '{ print $1}')"
+    MIN5="$(echo "$LOAD" | awk '{ print $2}')"
+    MIN15="$(echo "$LOAD" | awk '{ print $3}')"
+    TASKS="$(echo "$LOAD" | awk '{ print $4}')"
+    readarray -t IPRAY <<< "$ALLIPS"
     _placeTitle "System Information"
     _placeLine "  - Uptime:" "$UPTIME"
     _placeLine "  - Users:" "$USERS"
@@ -248,7 +270,7 @@ system() {
     _placeLine "  - Queued Tasks:" "$TASKS"
     #_placeLine "  - Watchdog:" "$WDOGPID"
     IPRAY_len=${#IPRAY[@]}
-    for (( i = 0; i < $IPRAY_len; i++ )); do
+    for (( i = 0; i < IPRAY_len; i++ )); do
         theip="${IPRAY[$i]}"
         if [[ "$i" -eq 0 ]]; then
             _placeLine "  - IP Addresses:" "$theip"
@@ -283,14 +305,23 @@ geo(){
 }
 
 firmware(){
-    currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-    local bito=$(getconf LONG_BIT)
-    currentV=${currentV%%,*}
+    if [[ -e "/wigwag/etc/versions.json" ]]; then
+        currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
+        currentV=${currentV%%,*}
+    else
+        currentV="versions.json not available"
+    fi
+    local bito
+    bito=$(getconf LONG_BIT)
     kernelV=$(uname -r)
     echo "${NORM}"
     _placeTitle "Firmware Version Information"
     _placeLine "  - Pelion Edge Version:" "$currentV"
-    _placeLine "    - edge-core" "$(/wigwag/mbed/edge-core -v | awk -F '-' '{print $1}')"
+    if [[ -e "/wigwag/mbed/edge-core" ]]; then
+        _placeLine "    - edge-core" "$(/wigwag/mbed/edge-core -v | awk -F '-' '{print $1}')"
+    else
+        _placeLine "    - edge-core"
+    fi
     # _placeLine "    - maestro" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
     # _placeLine "    - fluentbit" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
     # _placeLine "    - devicedb" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
@@ -310,19 +341,23 @@ account(){
     _placeTitle "Account Information"
     _placeLine "  - AccountID:" "$AccountID"
     _placeLine "  - Device ID:" "$DID"
-    _placeLine "  - LWM2M Service:" "$URL_LWM2Mserver"
+    _placeLine "  - LwM2M Service:" "$URL_LWM2Mserver"
     _placeLine "  - Gateway Service:" "$URL_gatewayServicesAddress"
     _placeLine "  - K8s Service:" "$URL_edgek8sServicesAddress"
     _placeLine "  - Container Service:" "$URL_containerServicesAddress"
     _placeLine "  - Status:" "$Status"
 }
 
-
 hardware(){
     Eth0Mac=$(_cat_if_exists /sys/class/net/eth0s/address)
-    local CPUCOUNT=$(grep -c processor /proc/cpuinfo)
-    local CPUTYPE=
-    local HWV=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))
+    local CPUCOUNT
+    CPUCOUNT=$(grep -c processor /proc/cpuinfo)
+    local HWV
+    if [[ -e /proc/device-tree/model ]]; then
+        HWV=$(tr -d '\0' </proc/device-tree/model)
+    else
+        HWV=$(uname -n)
+    fi
     _placeTitle "Hardware Information"
     _placeLine_ifSet "  - Hardware name:" "$HWV"
     _placeLine_ifSet "  - eth0 mac:" "$Eth0Mac"
@@ -336,20 +371,26 @@ hardware(){
         done
     fi
     _placeLine "  - CPU Count:" "$CPUCOUNT"
-    _placeLine "  - CPU Stats:" "${UND}Current${CYAN}\t\tMinimum\t\tMaximum  "
-    for (( i = 0; i < $CPUCOUNT; i++ )); do
-        curspeed=$(cat /sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq)
-        maxspeed=$(cat /sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq)
-        minspeed=$(cat /sys/devices/system/cpu/cpu$i/cpufreq/scaling_min_freq)
-        curspeed=$(_div1000 $curspeed)"Mhz"
-        maxspeed=$(_div1000 $maxspeed)"Mhz"
-        minspeed=$(_div1000 $minspeed)"Mhz"
-        maxspeed_len=${#maxspeed}
-        if [[ $maxspeed_len -ge 9 ]]; then
-            _placeLine "    - CPU$i:" "$curspeed\t$minspeed\t$maxspeed"
+    header=$(printf "${UND}%14s  %14s  %14s" "Current" "Minimum" "Maximum")
+    _placeLine "  - CPU Stats:" "$header"
+    for (( i = 0; i < CPUCOUNT; i++ )); do
+        # Virtual machines do not always have these.
+        if [[ -e  "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq" ]]; then
+            curspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
+            maxspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq")
+            minspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_min_freq")
+            curspeed=$(_div1000 "$curspeed")" Mhz"
+            curspeed=$(printf "%14s " "$curspeed")
+            maxspeed=$(_div1000 "$maxspeed")" Mhz"
+            maxspeed=$(printf "%14s " "$maxspeed")
+            minspeed=$(_div1000 "$minspeed")" Mhz"
+            minspeed=$(printf "%14s " "$minspeed")
         else
-            _placeLine "    - CPU$i:" "$curspeed\t\t$minspeed\t\t$maxspeed"
+            curspeed=$(printf "%14s " "n/a")
+            minspeed=$(printf "%14s " "n/a")
+            maxspeed=$(printf "%14s " "n/a")
         fi
+        _placeLine "    - CPU$i:" "$curspeed $minspeed $maxspeed"
     done
 }
 
@@ -358,39 +399,42 @@ manufacturing(){
     _placeLine "  - Build Date:" "$YEAR-$MONTH-$BATCH"
 }
 
-
-
 _pad(){
     pad="$1"
     str="$2"
     size=${#str}
     out="";
-    if [[ "$size" -eq 1 ]]; then
-        for (( i = 0; i < $pad; i++ )); do
+    if [[ $size -eq 1 ]]; then
+        for (( i = 0; i < pad; i++ )); do
             out=" $out"
         done
-    elif [[ "$size" -eq 2 ]]; then
-        for (( i = 0; i < $(( $pad - 2 )); i++ )); do
+    elif [[ $size -eq 2 ]]; then
+        for (( i = 0; i < $(( pad - 2 )); i++ )); do
             out=" $out"
         done
     fi
     echo "$out$str"
 }
 
-let PSSTOT=0;
 _memperf(){
     name="$1"
     pgr="$2"
-    pid=$(pgrep -f "$2")
-    if [[ $pid != "" ]]; then
-        Share=$(_div1024 $(echo 0 $(awk '/Shared/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Priv=$(_div1024 $(echo 0 $(awk '/Private/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Swap=$(_div1024 $(echo 0 $(awk '/Swap/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Virtual=$(_div1024 $(echo 0 $(awk '/Size/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Ref=$(_div1024 $(echo 0 $(awk '/Referenced/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Pss=$(_div1024 $(echo 0 $(awk '/Pss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        Rss=$(_div1024 $(echo 0 $(awk '/Rss/ {print "+", $2}' /proc/$pid/smaps) | bc) )
-        PSSTOT=$(bc <<< "scale=1; $PSSTOT + $Pss")
+    pid=$(pgrep -f "$pgr")
+    if [[ "$pid" != "" ]]; then
+        # This silences shellcheck, but it will not work then...
+        # Share="$(_div1024 "$(echo 0 "$(awk '/Shared/ {print "+", $2}' "/proc/$pid/smaps")" | bc)" )"
+        # shellcheck disable=SC2046
+        Share=$(_div1024 $(echo 0 $(awk '/Shared/ {print "+", $2}' "/proc/$pid/smaps") | bc) )
+        #Priv=$(_div1024 $(echo 0 $(awk '/Private/ {print "+", $2}' "/proc/$pid/smaps") | bc)" )
+        #Swap=$(_div1024 $(echo 0 $(awk '/Swap/ {print "+", $2}' "/proc/$pid/smaps") | bc)" )
+        # shellcheck disable=SC2046
+        Virtual=$(_div1024 $(echo 0 $(awk '/Size/ {print "+", $2}' "/proc/$pid/smaps") | bc) )
+        #Ref"=$(_div1024 $(echo 0 $(awk "'/Referenced/ {print "+", $2}' /proc/$pid/smaps") | bc) )
+        # shellcheck disable=SC2046
+        Pss=$(_div1024 $(echo 0 $(awk '/Pss/ {print "+", $2}' "/proc/$pid/smaps") | bc) )
+        # shellcheck disable=SC2046
+        Rss=$(_div1024 $(echo 0 $(awk '/Rss/ {print "+", $2}' "/proc/$pid/smaps") | bc) )
+        PSSTOT="$(bc <<< "scale=1; $PSSTOT + $Pss")"
         #_placeLine "  - $name ($pid):" "$Pss\t$Rss\t$Share\t$Priv\t$Size\t$Ref"
         _placeLine "  - $name ($pid):" "$Pss\t$Share\t$Rss\t$Virtual"
     fi
@@ -401,40 +445,32 @@ _pstate(){
     pgr="$2"
     sysd="$3"
     notes="$4"
-    pid=$(pgrep -f "$2")
+    pid=$(pgrep -f "$pgr")
+    UPTIME="not running"
     if [[ $pid != "" ]]; then
-        et=$(ps -o etime= -p "$pid");
-        if [[ "$et" = *"-"* ]]; then 
-            pupd=$(echo $et | awk -F '-' '{print $1}')
-        else
-            pupd=0
-        fi
-        puph=$(echo $et | awk -F ':' '{print $1}');
-        pupm=$(echo $et | awk -F ':' '{print $2}');
-        pups=$(echo $et | awk -F ':' '{print $3}');
         upSeconds=$(ps -o etimes= -p "$pid");
-        let secs=$((${upSeconds}%60))
-        let mins=$((${upSeconds}/60%60))
-        let hours=$((${upSeconds}/3600%24))
-        let days=$((${upSeconds}/86400))
+        secs=$((upSeconds%60))
+        mins=$((upSeconds/60%60))
+        hours=$((upSeconds/3600%24))
+        days=$((upSeconds/86400))
         UPTIME=""
         if [[ "${days}" -ne "0" ]]; then
             UPTIME="$(_pad 1 $days)d ";
         else
             UPTIME="$(_pad 1 0)d ";
         fi
-        UPTIME="$UPTIME$(_pad 1 $hours)h $(_pad 1 $mins)m "
+        UPTIME="$UPTIME$(_pad 1 $hours)h $(_pad 1 $mins)m "    
     fi
-    STATE=$(systemctl is-active $sysd)
-    if [[ $STATE = "inactive" && "$pid" != "" ]]; then
+    STATE=$(systemctl is-active "$sysd")
+    if [[ "$STATE" = "inactive" && "$pid" != "" ]]; then
         STATE=running
     fi
-    if [[ $STATE = "inactive" ]]; then
+    if [[ "$STATE" = "inactive" ]]; then
         STATED="${MAGENTA}$STATE${CYAN}"
     else
         STATED="${GREEN}$STATE${CYAN}"
     fi
-    if [[ $STATE = "inactive" ]]; then
+    if [[ "$STATE" = "inactive" ]]; then
         _placeLine "  - $name ($pid):" "$STATED\t$UPTIME\t$notes"
     elif [[ $STATE = "activating" ]]; then
         _placeLine "  - $name:" "$STATED\t$UPTIME\t$notes"
@@ -445,7 +481,7 @@ _pstate(){
 
 procState(){
     _placeTitle "Systemd Process State Information"
-    if [ $(whoami) != root ]; then
+    if [[ $(whoami) != "root" ]]; then
         _placeLine " - Requires sudo or root access" " "
     else    
         _placeLine " " "${UND}Status\t\t   Uptime\t\tNotes"
@@ -464,7 +500,7 @@ procState(){
 
 performance(){
     _placeTitle "Key Process Memory Information (MB)"
-    if [ $(whoami) != root ]; then
+    if [[ $(whoami) != "root" ]]; then
         _placeLine " - Requires sudo or root access" " "
     else            
         _placeLine "  Stats in megabytes (MB)" "${UND}Pss\tShared\tRss\tVirtual"
@@ -483,22 +519,22 @@ performance(){
 
 memory(){
     _placeTitle "System Memory"
-    if [ $(whoami) != root ]; then
+    if [[ $(whoami) != "root" ]]; then
         _placeLine " - Requires sudo or root access" " "
     else
         _placeLine "  " "${UND}Totals\t\tPercentage"
         _placeLine "  - Used/Total:" "$USED/$MEM MB\t$UMP%"
-        UMP=$(_percentage $PSSTOT $MEM)
+        UMP=$(_percentage "$PSSTOT" "$MEM")
         _placeLine "  - Key Processes:" "$PSSTOT MB\t$UMP% "
-        UMP=$(_percentage $volatilePSS $MEM)
+        UMP=$(_percentage "$volatilePSS" "$MEM")
         _placeLine "  - Volatile logging:" "$volatilePSS MB\t\t$UMP%"
         r2=$(bc <<< "scale=1; $MEM - $USED")
         r2=$(bc <<< "scale=1; $AVAILABLE - $r2 ")
         remainder=$(bc <<< "scale=1; $volatilePSS + $PSSTOT + $r2")
         remainder=$(bc <<< "scale=1; $USED - $remainder")
-        UMP=$(_percentage $remainder $MEM )
+        UMP=$(_percentage "$remainder" "$MEM" )
     #_placeLine "  - Other:" "$remainder MB\t\t$UMP%"
-    UMP=$(_percentage $AVAILABLE $MEM)
+    UMP=$(_percentage "$AVAILABLE" "$MEM")
     _placeLine "  - True Available Mem:" "$AVAILABLE MB\t\t$UMP%"
 fi
 }
@@ -516,7 +552,7 @@ _placeAbout(){
 about(){
     _placeHeader "About"
     _placeTitle "System Memory"
-    _placeAbout "  Read about memory allocation:" "http://www.linuxatemyram.com/"
+    _placeAbout "  Read about memory allocation:" "https://www.linuxatemyram.com/"
     _placeAbout "  - Physical Memory:" "How much installed physical ram the system has"
     _placeAbout "  - Memory Usage:" "MemoryUsed/MemoryAvaiable (as a percentage)"
     _placeAbout "  - True Available Mem:" "How much mem can go to processes (minus cache)"
@@ -591,10 +627,10 @@ COMMON_MENU_SWITCH_GRAB(){
             double=":"
             dKEY="${KEY:0:1}"
         else
-            dKEY=$KEY
+            dKEY="$KEY"
         fi
-        if [[ $KEY != "description" && $KEY != "usage" && $skip != true ]]; then
-            myline=$myline$dKEY$double
+        if [[ "$KEY" != "description" && "$KEY" != "usage" && $skip != true ]]; then
+            myline="$myline$dKEY$double"
         fi
     done
     echo "$myline"
@@ -633,9 +669,9 @@ COMMON_MENU_HELP(){
         if [[ ${#KEY} -gt 1 ]]; then
             dKEY="${KEY:0:1}"
         else
-            dKEY=$KEY
+            dKEY="$KEY"
         fi
-        if [[ $KEY != "description" && $KEY != "usage" && $skip != true ]]; then
+        if [[ "$KEY" != "description" && "$KEY" != "usage" && $skip != true ]]; then
             switches=$switches"${BOLD}-$dKEY${NORM} $VALUE\n"
         fi
     done  
@@ -651,7 +687,7 @@ argprocessor(){
         case $flag in
             a)  about=1; ;;
             #
-            h) COMMON_MENU_HELP; exit; ;;
+            h) COMMON_MENU_HELP "$@"; exit; ;;
             #
             m) memory=1; ;;
             #
