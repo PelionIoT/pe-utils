@@ -1,5 +1,9 @@
 ## Izuma Edge utilities 2.0.12
 1. [info] Update version information and tool name (Relay -> Edge).
+1. [info] Update info tool to work better with non-LmP releases.
+1. [info] CPU-frequency printing is evenly spaced and handles non-existent cpu-frequencies.
+1. [info] Process state reporting takes better into account non-running processes.
+1. [info] Clean shellcheck findings.
 
 ## Izuma Edge utilities 2.0.11
 1. [info] Fix geolocation information printing for multi-word cases (like New York).
