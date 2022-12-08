@@ -2,7 +2,7 @@ name: PR-check
 run-name: ${{ github.actor }} Pull Request - shellcheck
 on: [push]
 jobs:
-  run-pysh-check:
+  run-shellcheck:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
