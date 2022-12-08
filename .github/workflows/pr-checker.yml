@@ -1,0 +1,13 @@
+name: PR-check
+run-name: ${{ github.actor }} Pull Request - shellcheck
+on: [push]
+jobs:
+  run-pysh-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: shellcheck --version
+      - run: shellcheck fw-tools/testnet.sh
+      - run: fw-tools/testnet.sh
+      - run: shellcheck info-tool/info
+      - run: info-tool/info
