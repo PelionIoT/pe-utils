@@ -374,15 +374,22 @@ hardware(){
     header=$(printf "${UND}%14s  %14s  %14s" "Current" "Minimum" "Maximum")
     _placeLine "  - CPU Stats:" "$header"
     for (( i = 0; i < CPUCOUNT; i++ )); do
-        curspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
-        maxspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq")
-        minspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_min_freq")
-        curspeed=$(_div1000 "$curspeed")" Mhz"
-        curspeed=$(printf "%14s " "$curspeed")
-        maxspeed=$(_div1000 "$maxspeed")" Mhz"
-        maxspeed=$(printf "%14s " "$maxspeed")
-        minspeed=$(_div1000 "$minspeed")" Mhz"
-        minspeed=$(printf "%14s " "$minspeed")
+        # Virtual machines do not always have these.
+        if [[ -e  "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq" ]]; then
+            curspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
+            maxspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq")
+            minspeed=$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_min_freq")
+            curspeed=$(_div1000 "$curspeed")" Mhz"
+            curspeed=$(printf "%14s " "$curspeed")
+            maxspeed=$(_div1000 "$maxspeed")" Mhz"
+            maxspeed=$(printf "%14s " "$maxspeed")
+            minspeed=$(_div1000 "$minspeed")" Mhz"
+            minspeed=$(printf "%14s " "$minspeed")
+        else
+            curspeed=$(printf "%14s " "n/a")
+            minspeed=$(printf "%14s " "n/a")
+            maxspeed=$(printf "%14s " "n/a")
+        fi
         _placeLine "    - CPU$i:" "$curspeed $minspeed $maxspeed"
     done
 }
