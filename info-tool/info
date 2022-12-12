@@ -130,7 +130,7 @@ load_statistics(){
     else
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
     fi
-    if [[ -z "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
+    if [[ ! -e "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
         { 
             echo "AccountID=\"$AccountID\""
             echo "DID=\"$DID\""
