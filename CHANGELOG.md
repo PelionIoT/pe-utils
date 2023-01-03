@@ -1,3 +1,7 @@
+## Izuma Edge utilities 2.0.14
+1. [info] Update info tool to auto-detect the location of edge-core and pe-terminal from the 2 possible locations.
+1. [info] Update info tool to handle different output formats of ifconfig when determining IP addresses.
+ 
 ## Izuma Edge utilities 2.0.13
 1. [info] Update info tool to create statistics file if not found.
  
