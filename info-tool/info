@@ -56,6 +56,13 @@ set_storage_locations(){
         RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
     fi
+    if [ -e /edge/mbed/edge-core ]; then
+        # edge paths.
+        BASE_PATH="/edge"
+    else
+        # wigwag paths.
+        BASE_PATH="/wigwag"
+    fi
 }
 set_storage_locations
 
@@ -104,6 +111,9 @@ set_machine_vars(){
         TEMPRAY["thermal zone2"]="$(awk '{ printf "%.1f\n", ((($1 )/1000)) }' < /sys/class/thermal/thermal_zone2/temp) C"
     fi
     ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $2}')
+    if grep -q "Bcast" <<<"${ALLIPS}"; then
+        ALLIPS=$(ifconfig | grep inet | grep -v '127.0.0.1' | grep -v 'inet6' | cut -d: -f2 | awk '{print $1}')
+    fi
 }
 
 load_statistics(){
@@ -305,8 +315,8 @@ geo(){
 }
 
 firmware(){
-    if [[ -e "/wigwag/etc/versions.json" ]]; then
-        currentV=$(grep -ne 'version' /wigwag/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
+    if [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
+        currentV=$(grep -ne 'version' ${BASE_PATH}/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
         currentV=${currentV%%,*}
     else
         currentV="versions.json not available"
@@ -317,19 +327,11 @@ firmware(){
     echo "${NORM}"
     _placeTitle "Firmware Version Information"
     _placeLine "  - Pelion Edge Version:" "$currentV"
-    if [[ -e "/wigwag/mbed/edge-core" ]]; then
-        _placeLine "    - edge-core" "$(/wigwag/mbed/edge-core -v | awk -F '-' '{print $1}')"
+    if [[ -e "${BASE_PATH}/mbed/edge-core" ]]; then
+        _placeLine "    - edge-core" "$(${BASE_PATH}/mbed/edge-core -v | awk -F '-' '{print $1}')"
     else
         _placeLine "    - edge-core"
     fi
-    # _placeLine "    - maestro" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - fluentbit" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - devicedb" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - relay-term" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - edge-kubelet" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - kube-router" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - coredns" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
-    # _placeLine "    - docker" "$(/wigwag/system/bin/maestro -version | awk -F '-' '{print $1}')"
     _placeLine "  - OS:" "$OS ($bito bit)"
     _placeLine "  - OS Version:" "$OSVERSION"
     _placeLine "  - OS Machine:" "$THISMACHINE"
@@ -490,7 +492,11 @@ procState(){
         _pstate "maestro" "maestro-config.yaml" "maestro"
         _pstate "fluentbit" "td-agent-bit" "td-agent-bit"
         _pstate "devicedb" "devicedb.yaml" "devicedb" "started via maestro"
-        _pstate "relay-term" "relay-term/src" "pelion-relay-term"
+        if [ -e "/edge/system/bin/pe-terminal" ]; then
+            _pstate "edge-terminal" "pe-terminal" "edge-relay-term"
+        else
+            _pstate "relay-term" "relay-term/src" "pelion-relay-term"
+        fi
         _pstate "edge-kubelet" "kubelet --" "kubelet"
         _pstate "coredns" "coredns -conf" "coredns" "awaiting pods"
         _pstate "kube-router" "kube-router --" "kube-router"
