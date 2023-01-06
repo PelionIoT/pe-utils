@@ -492,8 +492,8 @@ procState(){
         _pstate "maestro" "maestro-config.yaml" "maestro"
         _pstate "fluentbit" "td-agent-bit" "td-agent-bit"
         _pstate "devicedb" "devicedb.yaml" "devicedb" "started via maestro"
-        if [ -e "/edge/system/bin/pe-terminal" ]; then
-            _pstate "edge-terminal" "pe-terminal" "edge-relay-term"
+        if [ -e "/edge/system/bin/edge-terminal" ]; then
+            _pstate "edge-terminal" "edge-terminal" "edge-terminal"
         else
             _pstate "relay-term" "relay-term/src" "pelion-relay-term"
         fi
