@@ -1,6 +1,10 @@
 name: PR-check
 run-name: ${{ github.actor }} PR checker
 on: [push]
+# This allows a subsequently queued workflow run to interrupt previous runs
+concurrency:
+  group: pe-utils-'${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
 jobs:
   run-shellcheck:
     runs-on: ubuntu-22.04
