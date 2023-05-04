@@ -1,7 +1,7 @@
 #!/bin/bash
-# Copyright (c) 2022 Izuma Networks
-# Copyright (c) 2020-2021, Pelion IoT and affiliates. 
 # Copyright (c) 2018-2020, Arm Limited and affiliates.
+# Copyright (c) 2020-2021, Pelion IoT and affiliates.
+# Copyright (c) 2022-2023 Izuma Networks
 # 
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -34,7 +34,7 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 #WHITE="$(tput setaf 7)"
 #ERROR="${REV}Error:${NORM}"
-version="2.0.12"
+version="2.1.0"
 export LogToTerm=1
 loglevel=info;
 
@@ -608,6 +608,7 @@ declare -A hp=(
     [description]="Displays vital system information statistics and process data"
     [usage]="-options"
     [a]="about"
+    [d]="debug"
     [h]="help"
     [m]="memory information added"
     [e1]="\t${BOLD}${UND}displays vital system information and process data${NORM}\n\t\t$0${NORM}\n"
@@ -697,6 +698,8 @@ argprocessor(){
             #
             m) memory=1; ;;
             #
+            d) set -x; ;;
+            #
             \?) echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed.";COMMON_MENU_HELP;exit; ;;
             #
         esac
@@ -706,4 +709,3 @@ argprocessor(){
 }
 
 argprocessor "$@"
-

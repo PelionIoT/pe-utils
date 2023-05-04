@@ -1,3 +1,7 @@
+## Izuma Edge utilities 2.1.0
+1. [edge-info] Rename `info` tool to `edge-info`. Linux already has a command called `info`, so we need to avoid that overlap with names.
+1. [testnet.sh] Renamed `testnet.sh` to `edge-testnet` to have similarity in naming with `edge-info`.
+
 ## Izuma Edge utilities 2.0.15
 1. [info] Update info tool to use edge-terminal instead of pe-terminal
 

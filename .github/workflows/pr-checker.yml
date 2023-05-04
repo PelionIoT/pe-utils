@@ -1,16 +1,33 @@
 name: PR-check
 run-name: ${{ github.actor }} PR checker
 on: [push]
+# This allows a subsequently queued workflow run to interrupt previous runs
+concurrency:
+  group: pe-utils-'${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
 jobs:
   run-shellcheck:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - run: shellcheck --version
-      - run: shellcheck fw-tools/testnet.sh
-      - run: fw-tools/testnet.sh
-      - run: shellcheck info-tool/info
-      - run: info-tool/info
+      - name: Shellcheck fw-tools/edge-testnet
+        run: |
+          shellcheck fw-tools/edge-testnet
+          fw-tools/edge-testnet
+      - run: shellcheck edge-info/edge-info
+      - run: cat /etc/os-release
+      - run: edge-info/edge-info
+
+  run-identity-tool-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run identity-tools tests
+        run: |
+          cd identity-tools/test-cases
+          ./test.sh
+
   run-pysh-check:
     runs-on: ubuntu-22.04
     env:
