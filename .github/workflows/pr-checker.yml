@@ -11,10 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: shellcheck --version
-      - run: shellcheck fw-tools/edge-testnet
-      - run: fw-tools/edge-testnet
+      - name: Shellcheck fw-tools/edge-testnet
+        run: |
+          shellcheck fw-tools/edge-testnet
+          fw-tools/edge-testnet
       - run: shellcheck edge-tool/edge-info
-      - run: info-tool/edge-info
+      - run: cat /etc/os-release
+      - run: info-tool/edge-info -d
 
   run-identity-tool-tests:
     runs-on: ubuntu-22.04

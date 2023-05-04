@@ -608,6 +608,7 @@ declare -A hp=(
     [description]="Displays vital system information statistics and process data"
     [usage]="-options"
     [a]="about"
+    [d]="debug"
     [h]="help"
     [m]="memory information added"
     [e1]="\t${BOLD}${UND}displays vital system information and process data${NORM}\n\t\t$0${NORM}\n"
@@ -697,6 +698,8 @@ argprocessor(){
             #
             m) memory=1; ;;
             #
+            d) set -x; ;;
+            #
             \?) echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed.";COMMON_MENU_HELP;exit; ;;
             #
         esac
@@ -706,4 +709,3 @@ argprocessor(){
 }
 
 argprocessor "$@"
-
