@@ -1,5 +1,7 @@
-## Izuma Edge utilities 2.1.1
+## Izuma Edge utilities 2.2.0
+1. [edge-info] Add support for different localhost:<port>/status ports (snap port `8081`, edge-core only `8080` and LmP `9091`).
 1. [edge-info] Removed unused files.
+1. [identity-tools/developer_identity] Merge the logging functionality from `common.sh` into `create-dev-identity.sh` (and remove that `common.sh` completely).
 
 ## Izuma Edge utilities 2.1.0
 1. [edge-info] Rename `info` tool to `edge-info`. Linux already has a command called `info`, so we need to avoid that overlap with names.

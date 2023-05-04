@@ -34,7 +34,7 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 #WHITE="$(tput setaf 7)"
 #ERROR="${REV}Error:${NORM}"
-version="2.1.1"
+version="2.2.0"
 export LogToTerm=1
 loglevel=info;
 
@@ -122,10 +122,22 @@ load_statistics(){
         source "$RFILE"
     fi
     # Check if we're running as a snap or not and change port accordingly.
-    EDGEPORT=8081
-    if [[ -z "${SNAP}" ]] ;then
+    if [[ -n "${SNAP}" ]]; then
+        EDGEPORT=8081
+    else
+        # Try if we're on LmP.
         EDGEPORT=9101
+        EDGECORESTATUS=$(curl -s "localhost:${EDGEPORT}/status")
+        if [[ -z $(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"') ]]; then
+            # Must be running on edge-core only then.
+            EDGEPORT=8080
+            EDGECORESTATUS=$(curl -s "localhost:${EDGEPORT}/status")
+            if [[ -z $(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"') ]]; then
+                echo "ERROR - can't find localhost:<port>/status, is edge-core running?"
+            fi
+        fi
     fi
+
     EDGECORESTATUS=$(curl -s localhost:"$EDGEPORT"/status);
     if [[ $EDGECORESTATUS = "" ]]; then
         Status="${MAGENTA}offline${NORM}"
