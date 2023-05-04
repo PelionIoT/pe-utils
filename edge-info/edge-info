@@ -121,7 +121,12 @@ load_statistics(){
         # shellcheck disable=SC1090
         source "$RFILE"
     fi
-    EDGECORESTATUS=$(curl -s localhost:9101/status);
+    # Check if we're running as a snap or not and change port accordingly.
+    EDGEPORT=8081
+    if [[ -z "${SNAP}" ]] ;then
+        EDGEPORT=9101
+    fi
+    EDGECORESTATUS=$(curl -s localhost:"$EDGEPORT"/status);
     if [[ $EDGECORESTATUS = "" ]]; then
         Status="${MAGENTA}offline${NORM}"
     elif [[ $AccountID = "" ]]; then
