@@ -34,7 +34,7 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 #WHITE="$(tput setaf 7)"
 #ERROR="${REV}Error:${NORM}"
-version="2.0.12"
+version="2.1.0"
 export LogToTerm=1
 loglevel=info;
 
