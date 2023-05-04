@@ -34,7 +34,7 @@ cli_warn() {
 }
 
 cli_debug() {
-    if [ ! -z $VERBOSE ]; then
+    if [ -n "$VERBOSE" ]; then
         script_name=${0##*/}
         timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         echo "$timestamp $script_name DEBUG $1"
