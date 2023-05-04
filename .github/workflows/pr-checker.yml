@@ -15,9 +15,9 @@ jobs:
         run: |
           shellcheck fw-tools/edge-testnet
           fw-tools/edge-testnet
-      - run: shellcheck edge-tool/edge-info
+      - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
-      - run: info-tool/edge-info -d
+      - run: edge-info/edge-info
 
   run-identity-tool-tests:
     runs-on: ubuntu-22.04
