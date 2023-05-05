@@ -46,12 +46,21 @@ _debug(){
     fi
 }
 
-#This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
+# This bash program is intended to work on multiple build systems.
+# In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.
+# For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
 STORAGE=EDGE_DATA
 set_storage_locations(){
-    if [[ -e "$STORAGE" ]]; then
+    if [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
         RFILE="$STORAGE/info/relaystatics.sh"
         IFILE="$STORAGE/edge_gw_config/identity.json"
+        # Fallbacks, in case the files cannot be found.
+        if ! [[ -f "$RFILE" ]]; then
+            RFILE=/userdata/info/relaystatics.sh
+        fi
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/userdata/edge_gw_config/identity.json
+        fi
     else
         RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
@@ -122,6 +131,7 @@ load_statistics(){
         source "$RFILE"
     fi
     # Check if we're running as a snap or not and change port accordingly.
+    # If env variable SNAP exists, we're running as SNAP.
     if [[ -n "${SNAP}" ]]; then
         EDGEPORT=8081
     else
