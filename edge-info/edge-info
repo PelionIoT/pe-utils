@@ -615,9 +615,13 @@ main(){
         account
         #manufacturing
         if [[ $memory -eq 1 ]]; then
-            procState
-            performance
-            memory
+            if [[ -z "$SNAP" ]]; then
+                procState
+                performance
+                memory
+            else
+                echo "NOTE! Cannot run -m option in a snap."
+            fi
         fi
     fi
 }
