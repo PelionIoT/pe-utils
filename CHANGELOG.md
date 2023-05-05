@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.1.1
+1. [edge-info] Removed unused files.
+
 ## Izuma Edge utilities 2.1.0
 1. [edge-info] Rename `info` tool to `edge-info`. Linux already has a command called `info`, so we need to avoid that overlap with names.
 1. [testnet.sh] Renamed `testnet.sh` to `edge-testnet` to have similarity in naming with `edge-info`.
