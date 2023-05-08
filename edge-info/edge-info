@@ -41,23 +41,29 @@ loglevel=info;
 THISMACHINE=$(uname -m)
 
 _debug(){
-    if [[ $loglevel = "debug" ]]; then
+    if [[ "$loglevel" = "debug" ]]; then
         echo "debug: $1"
     fi
 }
 
 # This bash program is intended to work on multiple build systems.
-# In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.
-# For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
+# In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable
+# (default: /var/rootdirs/userdata) using sed.
+# For other build systems, follow that technique OR 
+# add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
 STORAGE=EDGE_DATA
 set_storage_locations(){
-    if [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
+    # We're running in snap - try the /var/snap/pelion-edge
+    if [[ -n "${SNAP}" ]]; then
+        IFILE="/var/snap/pelion-edge/current/userdata/edge_gw_identity/identity.json"
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE="$STORAGE/edge_gw_config/identity.json"
+        fi
+        RFILE="/var/snap/pelion-edge/current/relaystatics.sh"
+    elif [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
         RFILE="$STORAGE/info/relaystatics.sh"
         IFILE="$STORAGE/edge_gw_config/identity.json"
         # Fallbacks, in case the files cannot be found.
-        if ! [[ -f "$RFILE" ]]; then
-            RFILE=/userdata/info/relaystatics.sh
-        fi
         if ! [[ -f "$IFILE" ]]; then
             IFILE=/userdata/edge_gw_config/identity.json
         fi
@@ -65,7 +71,9 @@ set_storage_locations(){
         RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
     fi
-    if [ -e /edge/mbed/edge-core ]; then
+    if [[ -n "${SNAP}" ]]; then
+        BASE_PATH="/snap/pelion-edge/current/wigwag"
+    elif [ -e /edge/mbed/edge-core ]; then
         # edge paths.
         BASE_PATH="/edge"
     else
@@ -129,6 +137,8 @@ load_statistics(){
     if [[ -e "$RFILE" ]]; then
         # shellcheck disable=SC1090
         source "$RFILE"
+    else
+        echo "Can't load $RFILE."
     fi
     # Check if we're running as a snap or not and change port accordingly.
     # If env variable SNAP exists, we're running as SNAP.
