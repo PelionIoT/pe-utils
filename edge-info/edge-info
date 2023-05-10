@@ -48,7 +48,7 @@ _debug(){
 
 #This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set /userdata at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set IFILE to your desired locations.
 
-STORAGE=/userdata
+STORAGE=EDGE_DATA
 set_storage_locations(){
     if [[ -e "$STORAGE" ]]; then
         IFILE="$STORAGE/edge_gw_config/identity.json"
