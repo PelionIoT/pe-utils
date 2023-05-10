@@ -46,14 +46,13 @@ _debug(){
     fi
 }
 
-#This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
-STORAGE=EDGE_DATA
+#This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set /userdata at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set IFILE to your desired locations.
+
+STORAGE=/userdata
 set_storage_locations(){
     if [[ -e "$STORAGE" ]]; then
-        RFILE="$STORAGE/info/relaystatics.sh"
         IFILE="$STORAGE/edge_gw_config/identity.json"
     else
-        RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
     fi
     if [ -e /edge/mbed/edge-core ]; then
@@ -117,10 +116,6 @@ set_machine_vars(){
 }
 
 load_statistics(){
-    if [[ -e "$RFILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$RFILE"
-    fi
     EDGECORESTATUS=$(curl -s localhost:9101/status);
     if [[ $EDGECORESTATUS = "" ]]; then
         Status="${MAGENTA}offline${NORM}"
@@ -139,16 +134,6 @@ load_statistics(){
         fi
     else
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
-    fi
-    if [[ ! -e "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
-        { 
-            echo "AccountID=\"$AccountID\""
-            echo "DID=\"$DID\""
-            echo "URL_LWM2Mserver=\"$URL_LWM2Mserver\""
-            echo "URL_gatewayServicesAddress=\"$URL_gatewayServicesAddress\""
-            echo "URL_edgek8sServicesAddress=\"$URL_edgek8sServicesAddress\""
-            echo "URL_containerServicesAddress=\"$URL_containerServicesAddress\""
-        } > $RFILE
     fi
 }
 
