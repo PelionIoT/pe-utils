@@ -69,7 +69,7 @@ set_storage_locations(){
         IFILE=/userdata/edge_gw_config/identity.json
     fi
     if [[ -n "${SNAP}" ]]; then
-        BASE_PATH="/snap/pelion-edge/current/wigwag"
+        BASE_PATH="${SNAP_NAME}"
     elif [ -e /edge/mbed/edge-core ]; then
         # edge paths.
         BASE_PATH="/edge"
@@ -332,9 +332,11 @@ geo(){
 }
 
 firmware(){
-    if [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
-        currentV=$(grep -ne 'version' ${BASE_PATH}/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-        currentV=${currentV%%,*}
+    if [[ -n "${SNAP}" ]] ; then
+        currentV="${SNAP_VERSION}"
+    elif [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
+        echo "${BASE_PATH}/etc/versions.json"
+        currentV=$(jq -r ".version" < "${BASE_PATH}/etc/versions.json")
     else
         currentV="versions.json not available"
     fi
