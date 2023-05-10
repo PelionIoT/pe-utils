@@ -59,16 +59,13 @@ set_storage_locations(){
         if ! [[ -f "$IFILE" ]]; then
             IFILE="$STORAGE/edge_gw_config/identity.json"
         fi
-        RFILE="/var/snap/pelion-edge/current/userdata/relaystatics.sh"
     elif [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
-        RFILE="$STORAGE/info/relaystatics.sh"
         IFILE="$STORAGE/edge_gw_config/identity.json"
         # Fallbacks, in case the files cannot be found.
         if ! [[ -f "$IFILE" ]]; then
             IFILE=/userdata/edge_gw_config/identity.json
         fi
     else
-        RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
     fi
     if [[ -n "${SNAP}" ]]; then
@@ -134,12 +131,6 @@ set_machine_vars(){
 }
 
 load_statistics(){
-    if [[ -f "$RFILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$RFILE"
-    else
-        echo "Can't load $RFILE."
-    fi
     # Check if we're running as a snap or not and change port accordingly.
     # If env variable SNAP exists, we're running as SNAP.
     if [[ -n "${SNAP}" ]]; then
@@ -177,18 +168,7 @@ load_statistics(){
     else
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
     fi
-    if [[ ! -f "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
-        { 
-            echo "AccountID=\"$AccountID\""
-            echo "DID=\"$DID\""
-            echo "URL_LWM2Mserver=\"$URL_LWM2Mserver\""
-            echo "URL_gatewayServicesAddress=\"$URL_gatewayServicesAddress\""
-            echo "URL_edgek8sServicesAddress=\"$URL_edgek8sServicesAddress\""
-            echo "URL_containerServicesAddress=\"$URL_containerServicesAddress\""
-        } > $RFILE
-    fi
 }
-
 
 
 _exec(){
