@@ -59,7 +59,7 @@ set_storage_locations(){
         if ! [[ -f "$IFILE" ]]; then
             IFILE="$STORAGE/edge_gw_config/identity.json"
         fi
-        RFILE="/var/snap/pelion-edge/current/relaystatics.sh"
+        RFILE="/var/snap/pelion-edge/current/userdata/relaystatics.sh"
     elif [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
         RFILE="$STORAGE/info/relaystatics.sh"
         IFILE="$STORAGE/edge_gw_config/identity.json"
@@ -134,7 +134,7 @@ set_machine_vars(){
 }
 
 load_statistics(){
-    if [[ -e "$RFILE" ]]; then
+    if [[ -f "$RFILE" ]]; then
         # shellcheck disable=SC1090
         source "$RFILE"
     else
@@ -177,7 +177,7 @@ load_statistics(){
     else
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
     fi
-    if [[ ! -e "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
+    if [[ ! -f "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
         { 
             echo "AccountID=\"$AccountID\""
             echo "DID=\"$DID\""
