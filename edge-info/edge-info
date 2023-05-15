@@ -65,8 +65,17 @@ set_storage_locations(){
         if ! [[ -f "$IFILE" ]]; then
             IFILE=/userdata/edge_gw_config/identity.json
         fi
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/edge/etc/identity.json
+        fi
     else
         IFILE=/userdata/edge_gw_config/identity.json
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/userdata/edge_gw_config/identity.json
+        fi
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/edge/etc/identity.json
+        fi
     fi
     # BASE_PATH is used for finding versions.json and edge-core
     if [[ -n "${SNAP}" ]]; then
@@ -352,8 +361,11 @@ firmware(){
     if [[ -n "${SNAP}" ]] ; then
         currentV="${SNAP_VERSION}"
     elif [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
-        echo "${BASE_PATH}/etc/versions.json"
         currentV=$(jq -r ".version" < "${BASE_PATH}/etc/versions.json")
+    elif [[ -e "${BASE_PATH}/versions.json" ]]; then
+        currentV=$(jq -r ".version" < "${BASE_PATH}/versions.json")
+    elif [[ -e "/edge/etc/versions.json" ]]; then
+        currentV=$(jq -r ".version" < "/edge/etc/versions.json")
     else
         currentV="versions.json not available"
     fi
