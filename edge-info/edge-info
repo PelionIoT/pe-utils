@@ -55,7 +55,7 @@ STORAGE=EDGE_DATA
 set_storage_locations(){
     # We're running in snap - try the /var/snap/pelion-edge
     if [[ -n "${SNAP}" ]]; then
-        IFILE="/var/snap/pelion-edge/current/userdata/edge_gw_identity/identity.json"
+        IFILE="/var/snap/${SNAP_NAME}/current/userdata/edge_gw_identity/identity.json"
         if ! [[ -f "$IFILE" ]]; then
             IFILE="$STORAGE/edge_gw_config/identity.json"
         fi
@@ -68,14 +68,31 @@ set_storage_locations(){
     else
         IFILE=/userdata/edge_gw_config/identity.json
     fi
+    # BASE_PATH is used for finding versions.json and edge-core
     if [[ -n "${SNAP}" ]]; then
-        BASE_PATH="${SNAP_NAME}"
-    elif [ -e /edge/mbed/edge-core ]; then
-        # edge paths.
-        BASE_PATH="/edge"
+        if [[ -e "${SNAP}/wigwag/mbed/edge-core" ]]; then
+            BASE_PATH="${SNAP}/wigwag/mbed"
+        elif [[ -e "${SNAP}/edge/edge-core" ]]; then
+            BASE_PATH="${SNAP}/edge/"
+        elif [[ -e "/mbed/edge-core" ]]; then
+            BASE_PATH="/mbed"
+        elif [[ -e "/bin/edge-core" ]]; then
+            BASE_PATH="/bin"
+        else
+            # wigwag paths.
+            BASE_PATH="/wigwag"
+        fi
     else
-        # wigwag paths.
-        BASE_PATH="/wigwag"
+        if [ -e /edge/mbed/edge-core ]; then
+            # edge paths.
+            BASE_PATH="/edge/mbed"
+        elif [ -e /bin/edge-core ]; then
+            # edge paths.
+            BASE_PATH="/bin/"
+        else
+            # wigwag paths.
+            BASE_PATH="/wigwag"
+        fi
     fi
 }
 set_storage_locations
@@ -346,8 +363,8 @@ firmware(){
     echo "${NORM}"
     _placeTitle "Firmware Version Information"
     _placeLine "  - Pelion Edge Version:" "$currentV"
-    if [[ -e "${BASE_PATH}/mbed/edge-core" ]]; then
-        _placeLine "    - edge-core" "$(${BASE_PATH}/mbed/edge-core -v | awk -F '-' '{print $1}')"
+    if [[ -e "${BASE_PATH}/edge-core" ]]; then
+        _placeLine "    - edge-core" "$(${BASE_PATH}/edge-core -v | awk -F '-' '{print $1}')"
     else
         _placeLine "    - edge-core"
     fi
@@ -355,7 +372,15 @@ firmware(){
     _placeLine "  - OS Version:" "$OSVERSION"
     _placeLine "  - OS Machine:" "$THISMACHINE"
     _placeLine "  - Kernel Version:" "$kernelV"
-
+    if [[ -n ${SNAP} ]]; then
+        _placeLine "  - SNAP:" "${SNAP}"
+        _placeLine "  - SNAP_NAME:" "${SNAP_NAME}"
+        _placeLine "  - SNAP_VERSION:" "${SNAP_VERSION}"
+        _placeLine "  - SNAP_REVISION:" "${SNAP_REVISION}"
+        _placeLine "  - SNAP_DATA:" "${SNAP_DATA}"
+        _placeLine "  - SNAP_COMMON:" "${SNAP_COMMON}"
+        _placeLine "  - SNAP_USER_COMMON:" "${SNAP_USER_COMMON}"
+    fi
 }
 
 account(){
