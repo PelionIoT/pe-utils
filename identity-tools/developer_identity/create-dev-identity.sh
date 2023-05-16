@@ -17,8 +17,31 @@
 
 set -e
 
-export DEVID_CLI_DIR=$(cd $(dirname $0) && pwd)
-. "$DEVID_CLI_DIR/common.sh"
+cli_log() {
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name LOG $1"
+}
+
+cli_error() {
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name ERROR $1"
+}
+
+cli_warn() {
+    script_name=${0##*/}
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "$timestamp $script_name WARN $1"
+}
+
+cli_debug() {
+    if [ -n "$VERBOSE" ]; then
+        script_name=${0##*/}
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        echo "$timestamp $script_name DEBUG $1"
+    fi
+}
 
 HW_VERSION="unknown"
 [ -f /proc/device-tree/model ] && HW_VERSION=$(sed 's/ /_/g' <<< $(tr -d '\0' </proc/device-tree/model))

@@ -19,6 +19,9 @@ LWT=$temp/test-lwm2m.txt
 L3T=$temp/layer3.txt
 L4T=$temp/layer4.txt
 
+# For faster testing w/o actually building the whole snap
+#SNAP="snap-test"
+
 VERBOSE=0
 DONTDELETE=0
 
@@ -155,7 +158,6 @@ test_gateway() {
     fi
 }
 
-
 test_L3() {
     _url() {
         if [[ $(ping -q -c 1 "$1" >>"$L3T" 2>&1) -eq 0 ]]; then
@@ -168,6 +170,17 @@ test_L3() {
     verbose "---------------------------------"
     _url bootstrap.us-east-1.mbedcloud.com
     _url lwm2m.us-east-1.mbedcloud.com
+    # Check if we're running as a snap or not and change port accordingly.
+    # If env variable SNAP exists, we're running as SNAP.
+    if [[ -n "${SNAP}" ]]; then
+        verbose "Test Layer 3 for snapcraft.io"
+        _url api.snapcraft.io
+        _url canonical-lgw01.cdn.snapcraftcontent.com 
+        _url canonical-lcy01.cdn.snapcraftcontent.com
+        _url canonical-lcy02.cdn.snapcraftcontent.com
+        _url canonical-bos01.cdn.snapcraftcontent.com
+        _url serial-vault-partners.canonical.com  
+    fi
 }
 
 test_L4() {
@@ -186,6 +199,18 @@ test_L4() {
     _nc lwm2m.us-east-1.mbedcloud.com 5684
     _nc k8s.us-east-1.mbedcloud.com 443
     _nc gateways.us-east-1.mbedcloud.com 443
+    if [[ -n "${SNAP}" ]]; then
+        # https://snapcraft.io/docs/network-requirements
+        _nc api.snapcraft.io 443
+        _nc dashboard.snapcraft.io 443
+        _nc login.ubuntu.com 443
+        _nc storage.snapcraftcontent.com 443
+        _nc canonical-lgw01.cdn.snapcraftcontent.com 443
+        _nc canonical-lcy01.cdn.snapcraftcontent.com 443
+        _nc canonical-lcy02.cdn.snapcraftcontent.com 443
+        _nc canonical-bos01.cdn.snapcraftcontent.com 443
+        _nc serial-vault-partners.canonical.com 443
+    fi
 }
 
 main() {

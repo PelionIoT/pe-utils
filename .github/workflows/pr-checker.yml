@@ -27,6 +27,11 @@ jobs:
         run: |
           cd identity-tools/test-cases
           ./test.sh
+      - name: Create one developer identity-tools
+        run: |
+          cd identity-tools/developer_identity
+          ./create-dev-identity.sh -h
+          ./create-dev-identity.sh -d -w CI-test
 
   run-pysh-check:
     runs-on: ubuntu-22.04

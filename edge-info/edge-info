@@ -21,47 +21,82 @@
 #---------------Configuration-------------#
 
 # No, you cannot export the colors - printing goes crazy if you do that.
-NORM="$(tput sgr0)"
-BOLD="$(tput bold)"
-REV="$(tput smso)"
-UND="$(tput smul)"
-#BLACK="$(tput setaf 0)"
-#RED="$(tput setaf 1)"
-GREEN="$(tput setaf 2)"
-YELLOW="$(tput setaf 3)"
-#BLUE="$(tput setaf 4)"
-MAGENTA="$(tput setaf 5)"
-CYAN="$(tput setaf 6)"
-#WHITE="$(tput setaf 7)"
-#ERROR="${REV}Error:${NORM}"
-version="2.1.1"
+NORM="\u001b[0m"
+BOLD="\u001b[1m"
+REV="\u001b[7m"
+UND="\u001b[4m"
+GREEN="\u001b[32m"
+YELLOW="\u001b[33m"
+MAGENTA="\u001b[35m"
+CYAN="\u001b[36m"
+version="2.2.0"
 export LogToTerm=1
 loglevel=info;
 
 THISMACHINE=$(uname -m)
 
 _debug(){
-    if [[ $loglevel = "debug" ]]; then
+    if [[ "$loglevel" = "debug" ]]; then
         echo "debug: $1"
     fi
 }
 
-#This bash program is intended to work on multiple build systems.  In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable (default: /var/rootdirs/userdata) using sed.  For other build systems, follow that technique OR add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
+# This bash program is intended to work on multiple build systems.
+# In yocto/linux micro platform (LMP) we set EDGE_DATA at build time to a user variable
+# (default: /var/rootdirs/userdata) using sed.
+# For other build systems, follow that technique OR 
+# add on to the following function to detect your system and set RFILE and IFILE to your desired locations.
 STORAGE=EDGE_DATA
 set_storage_locations(){
-    if [[ -e "$STORAGE" ]]; then
-        RFILE="$STORAGE/info/relaystatics.sh"
+    # We're running in snap - try the /var/snap/pelion-edge
+    if [[ -n "${SNAP}" ]]; then
+        IFILE="/var/snap/${SNAP_NAME}/current/userdata/edge_gw_identity/identity.json"
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE="$STORAGE/edge_gw_config/identity.json"
+        fi
+    elif [[ -e "$STORAGE" ]] && [[ -d "$STORAGE" ]]; then
         IFILE="$STORAGE/edge_gw_config/identity.json"
+        # Fallbacks, in case the files cannot be found.
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/userdata/edge_gw_config/identity.json
+        fi
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/edge/etc/identity.json
+        fi
     else
-        RFILE=/userdata/info/relaystatics.sh
         IFILE=/userdata/edge_gw_config/identity.json
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/userdata/edge_gw_config/identity.json
+        fi
+        if ! [[ -f "$IFILE" ]]; then
+            IFILE=/edge/etc/identity.json
+        fi
     fi
-    if [ -e /edge/mbed/edge-core ]; then
-        # edge paths.
-        BASE_PATH="/edge"
+    # BASE_PATH is used for finding versions.json and edge-core
+    if [[ -n "${SNAP}" ]]; then
+        if [[ -e "${SNAP}/wigwag/mbed/edge-core" ]]; then
+            BASE_PATH="${SNAP}/wigwag/mbed"
+        elif [[ -e "${SNAP}/edge/edge-core" ]]; then
+            BASE_PATH="${SNAP}/edge/"
+        elif [[ -e "/mbed/edge-core" ]]; then
+            BASE_PATH="/mbed"
+        elif [[ -e "/bin/edge-core" ]]; then
+            BASE_PATH="/bin"
+        else
+            # wigwag paths.
+            BASE_PATH="/wigwag"
+        fi
     else
-        # wigwag paths.
-        BASE_PATH="/wigwag"
+        if [ -e /edge/mbed/edge-core ]; then
+            # edge paths.
+            BASE_PATH="/edge/mbed"
+        elif [ -e /bin/edge-core ]; then
+            # edge paths.
+            BASE_PATH="/bin/"
+        else
+            # wigwag paths.
+            BASE_PATH="/wigwag"
+        fi
     fi
 }
 set_storage_locations
@@ -117,11 +152,25 @@ set_machine_vars(){
 }
 
 load_statistics(){
-    if [[ -e "$RFILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$RFILE"
+    # Check if we're running as a snap or not and change port accordingly.
+    # If env variable SNAP exists, we're running as SNAP.
+    if [[ -n "${SNAP}" ]]; then
+        EDGEPORT=8081
+    else
+        # Try if we're on LmP.
+        EDGEPORT=9101
+        EDGECORESTATUS=$(curl -s "localhost:${EDGEPORT}/status")
+        if [[ -z $(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"') ]]; then
+            # Must be running on edge-core only then.
+            EDGEPORT=8080
+            EDGECORESTATUS=$(curl -s "localhost:${EDGEPORT}/status")
+            if [[ -z $(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"') ]]; then
+                echo "ERROR - can't find localhost:<port>/status, is edge-core running?"
+            fi
+        fi
     fi
-    EDGECORESTATUS=$(curl -s localhost:9101/status);
+
+    EDGECORESTATUS=$(curl -s localhost:"$EDGEPORT"/status);
     if [[ $EDGECORESTATUS = "" ]]; then
         Status="${MAGENTA}offline${NORM}"
     elif [[ $AccountID = "" ]]; then
@@ -140,18 +189,7 @@ load_statistics(){
     else
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
     fi
-    if [[ ! -e "$RFILE" && "$URL_gatewayServicesAddress" != "" ]]; then
-        { 
-            echo "AccountID=\"$AccountID\""
-            echo "DID=\"$DID\""
-            echo "URL_LWM2Mserver=\"$URL_LWM2Mserver\""
-            echo "URL_gatewayServicesAddress=\"$URL_gatewayServicesAddress\""
-            echo "URL_edgek8sServicesAddress=\"$URL_edgek8sServicesAddress\""
-            echo "URL_containerServicesAddress=\"$URL_containerServicesAddress\""
-        } > $RFILE
-    fi
 }
-
 
 
 _exec(){
@@ -315,9 +353,14 @@ geo(){
 }
 
 firmware(){
-    if [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
-        currentV=$(grep -ne 'version' ${BASE_PATH}/etc/versions.json 2> /dev/null | xargs | awk -F ' ' '{print $8}')
-        currentV=${currentV%%,*}
+    if [[ -n "${SNAP}" ]] ; then
+        currentV="${SNAP_VERSION}"
+    elif [[ -e "${BASE_PATH}/etc/versions.json" ]]; then
+        currentV=$(jq -r ".version" < "${BASE_PATH}/etc/versions.json")
+    elif [[ -e "${BASE_PATH}/versions.json" ]]; then
+        currentV=$(jq -r ".version" < "${BASE_PATH}/versions.json")
+    elif [[ -e "/edge/etc/versions.json" ]]; then
+        currentV=$(jq -r ".version" < "/edge/etc/versions.json")
     else
         currentV="versions.json not available"
     fi
@@ -327,8 +370,8 @@ firmware(){
     echo "${NORM}"
     _placeTitle "Firmware Version Information"
     _placeLine "  - Pelion Edge Version:" "$currentV"
-    if [[ -e "${BASE_PATH}/mbed/edge-core" ]]; then
-        _placeLine "    - edge-core" "$(${BASE_PATH}/mbed/edge-core -v | awk -F '-' '{print $1}')"
+    if [[ -e "${BASE_PATH}/edge-core" ]]; then
+        _placeLine "    - edge-core" "$(${BASE_PATH}/edge-core -v | awk -F '-' '{print $1}')"
     else
         _placeLine "    - edge-core"
     fi
@@ -336,7 +379,15 @@ firmware(){
     _placeLine "  - OS Version:" "$OSVERSION"
     _placeLine "  - OS Machine:" "$THISMACHINE"
     _placeLine "  - Kernel Version:" "$kernelV"
-
+    if [[ -n ${SNAP} ]]; then
+        _placeLine "  - SNAP:" "${SNAP}"
+        _placeLine "  - SNAP_NAME:" "${SNAP_NAME}"
+        _placeLine "  - SNAP_VERSION:" "${SNAP_VERSION}"
+        _placeLine "  - SNAP_REVISION:" "${SNAP_REVISION}"
+        _placeLine "  - SNAP_DATA:" "${SNAP_DATA}"
+        _placeLine "  - SNAP_COMMON:" "${SNAP_COMMON}"
+        _placeLine "  - SNAP_USER_COMMON:" "${SNAP_USER_COMMON}"
+    fi
 }
 
 account(){
@@ -588,9 +639,13 @@ main(){
         account
         #manufacturing
         if [[ $memory -eq 1 ]]; then
-            procState
-            performance
-            memory
+            if [[ -z "$SNAP" ]]; then
+                procState
+                performance
+                memory
+            else
+                echo "NOTE! Cannot run -m option in a snap."
+            fi
         fi
     fi
 }
