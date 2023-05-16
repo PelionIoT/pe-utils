@@ -21,19 +21,14 @@
 #---------------Configuration-------------#
 
 # No, you cannot export the colors - printing goes crazy if you do that.
-NORM="$(tput sgr0)"
-BOLD="$(tput bold)"
-REV="$(tput smso)"
-UND="$(tput smul)"
-#BLACK="$(tput setaf 0)"
-#RED="$(tput setaf 1)"
-GREEN="$(tput setaf 2)"
-YELLOW="$(tput setaf 3)"
-#BLUE="$(tput setaf 4)"
-MAGENTA="$(tput setaf 5)"
-CYAN="$(tput setaf 6)"
-#WHITE="$(tput setaf 7)"
-#ERROR="${REV}Error:${NORM}"
+NORM="\u001b[0m"
+BOLD="\u001b[1m"
+REV="\u001b[7m"
+UND="\u001b[4m"
+GREEN="\u001b[32m"
+YELLOW="\u001b[33m"
+MAGENTA="\u001b[35m"
+CYAN="\u001b[36m"
 version="2.2.0"
 export LogToTerm=1
 loglevel=info;
