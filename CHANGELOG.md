@@ -2,6 +2,7 @@
 1. [edge-info] Add support for different localhost:<port>/status ports (snap port `8081`, edge-core only `8080` and LmP `9091`).
 1. [edge-info] Removed unused files.
 1. [edge-info] Path fixes for snap-pelion-edge information.
+1. [edge-testnet] Check also snapcraft.io specific addresses, if running in a snap.
 1. [identity-tools/developer_identity] Merge the logging functionality from `common.sh` into `create-dev-identity.sh` (and remove that `common.sh` completely).
 
 ## Izuma Edge utilities 2.1.0
