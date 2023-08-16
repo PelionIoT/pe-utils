@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Copyright (c) 2018, Arm Limited and affiliates.
+# Copyright (c) 2023, Izuma Networks
+#
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +37,7 @@ function jsonValue() {
 }
 
 getEdgeStatus() {
-    [[ -z "$edge_status" ]] && edge_status=$(curl http://localhost:${EDGE_CORE_PORT}/status)
+    [[ -z "$edge_status" ]] && edge_status=$(curl -s http://localhost:${EDGE_CORE_PORT}/status)
     OU=`echo $edge_status | jq -r '."account-id"'`
     internalid=`echo $edge_status | jq -r '."internal-id"'`
     lwm2mserveruri=`echo $edge_status | jq -r '."lwm2m-server-uri"' | cut -d':' -f 2 | sed 's/^\/\///'`
