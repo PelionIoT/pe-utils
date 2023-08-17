@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.2.2
+1. Version number bump from 2.2.0 to 2.2.2.
+
 ## Izuma Edge utilities 2.2.1
 1. [identity-tool] Silence `curl` to have less noise in logs.
 
