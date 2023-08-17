@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.2.1
+1. [identity-tool] Silence `curl` to have less noise in logs.
+
 ## Izuma Edge utilities 2.2.0
 1. [edge-info] Add support for different localhost:<port>/status ports (snap port `8081`, edge-core only `8080` and LmP `9091`).
 1. [edge-info] Removed unused files.
