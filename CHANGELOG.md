@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.0
+1. [edge-testnet] - add support for container registry.
+
 ## Izuma Edge utilities 2.2.2
 1. Version number bump from 2.2.0 to 2.2.2.
 
