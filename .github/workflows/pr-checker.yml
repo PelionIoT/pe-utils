@@ -50,3 +50,16 @@ jobs:
       #- run: git clone https://github.com/PelionIoT/scripts-internal.git
       - run: echo "." >scripts-internal/.nopyshcheck
       - run: .github/workflows/pysh-checker.sh ${{ github.event.repository.default_branch }} ${{ github.ref_name }}
+
+  run-edge-testnet:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run edge-testnet
+      run: fw-tools/edge-testnet
+
+  versions-check:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - run: ./check_versions.sh
