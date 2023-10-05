@@ -63,3 +63,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: ./check_versions.sh
+
+  misspell:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Run misspell (findings may not increase)
+      run: |
+        curl -L -o ./install-misspell.sh https://git.io/misspell
+        sh ./install-misspell.sh
+        bin/misspell -i mosquitto
