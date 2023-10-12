@@ -29,7 +29,7 @@ GREEN="\u001b[32m"
 YELLOW="\u001b[33m"
 MAGENTA="\u001b[35m"
 CYAN="\u001b[36m"
-version="2.2.2"
+version="2.3.0"
 export LogToTerm=1
 loglevel=info;
 
@@ -177,6 +177,7 @@ load_statistics(){
         AccountID=$(echo "$EDGECORESTATUS" | jq -r '."account-id"')
         Status=$(echo "$EDGECORESTATUS" | jq -r '."status"')
         DID=$(echo "$EDGECORESTATUS" | jq -r '."endpoint-name"')
+        INTID=$(echo "$EDGECORESTATUS" | jq -r '."internal-id"')
         URL_LWM2Mserver=$(echo "$EDGECORESTATUS" | jq -r '."lwm2m-server-uri"'| awk -F "?" '{print $1}')
         if [[ -e "$IFILE" ]]; then
             # shellcheck disable=SC2002
@@ -394,6 +395,7 @@ account(){
     _placeTitle "Account Information"
     _placeLine "  - AccountID:" "$AccountID"
     _placeLine "  - Device ID:" "$DID"
+    _placeLine "  - Internal ID:" "$INTID"
     _placeLine "  - LwM2M Service:" "$URL_LWM2Mserver"
     _placeLine "  - Gateway Service:" "$URL_gatewayServicesAddress"
     _placeLine "  - K8s Service:" "$URL_edgek8sServicesAddress"

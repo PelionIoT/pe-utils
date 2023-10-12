@@ -18,6 +18,7 @@ gwT=$temp/gateway.txt
 LWT=$temp/test-lwm2m.txt
 L3T=$temp/layer3.txt
 L4T=$temp/layer4.txt
+gwR=$temp/registry.txt
 
 # For faster testing w/o actually building the whole snap
 #SNAP="snap-test"
@@ -158,6 +159,31 @@ test_gateway() {
     fi
 }
 
+test_registry() {
+    verbose "Test container registry server connection (port $port)"
+    verbose "------------------------------------------------------"
+    verbose "Uses openssl to connect to container registry."
+    verbose "Write openssl output to $gwR."
+    echo | openssl s_client -connect containers.us-east-1.mbedcloud.com:"$port" 2>"$gwR" >"$gwR"
+
+    # get openssl return code
+    RESULT=$(grep 'Verify return code' "$gwR")
+    if [ -z "$RESULT" ]; then
+        clihelp::failure "openssl failed with: $(cat "$gwR")"
+    fi
+    # print result
+    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
+    if [ "$CODE" = 0 ]; then
+        clihelp::success "TLS to registry server (port $port)"
+    else
+        clihelp::failure "TLS to registry server (port $port)"
+        echo "--------------"
+        echo "$RESULT"
+        echo "--------------"
+    fi
+}
+
+
 test_L3() {
     _url() {
         if [[ $(ping -q -c 1 "$1" >>"$L3T" 2>&1) -eq 0 ]]; then
@@ -199,6 +225,7 @@ test_L4() {
     _nc lwm2m.us-east-1.mbedcloud.com 5684
     _nc k8s.us-east-1.mbedcloud.com 443
     _nc gateways.us-east-1.mbedcloud.com 443
+    _nc containers.us-east-1.mbedcloud.com 443
     if [[ -n "${SNAP}" ]]; then
         # https://snapcraft.io/docs/network-requirements
         _nc api.snapcraft.io 443
@@ -224,6 +251,7 @@ main() {
     # K8S and Gateway server only operate on port 443
     test_k8s
     test_gateway
+    test_registry
     if [[ "$DONTDELETE" -eq 0 ]]; then
         rm -rf "$temp"
     else
