@@ -72,3 +72,19 @@ jobs:
         curl -L -o ./install-misspell.sh https://git.io/misspell
         sh ./install-misspell.sh
         bin/misspell -i mosquitto
+
+  run-edge-info:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        cd edge-info
+        ./edge-info
+        out=$(./edge-info)
+        # If we find \u* anything in the output,
+        # likely a echo -e mistake
+        if echo "$out" | grep -q "\\\\u"; then
+          echo "The string contains \\u"
+          echo "Likely a echo -e mistake"
+          exit 1
+        fi
