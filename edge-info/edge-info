@@ -29,7 +29,7 @@ GREEN="\u001b[32m"
 YELLOW="\u001b[33m"
 MAGENTA="\u001b[35m"
 CYAN="\u001b[36m"
-version="2.3.0"
+version="2.3.1"
 export LogToTerm=1
 loglevel=info;
 
@@ -368,7 +368,6 @@ firmware(){
     local bito
     bito=$(getconf LONG_BIT)
     kernelV=$(uname -r)
-    echo "${NORM}"
     _placeTitle "Firmware Version Information"
     _placeLine "  - Pelion Edge Version:" "$currentV"
     if [[ -e "${BASE_PATH}/edge-core" ]]; then

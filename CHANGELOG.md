@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.1
+1. [edge-info] - remove echo $NORM at beginning of firmware info, it's not coming out right.
+
 ## Izuma Edge utilities 2.3.0
 1. [edge-testnet] - add support for container registry.
 1. [edge-info] - add printout for internal id.
