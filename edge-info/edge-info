@@ -204,7 +204,7 @@ _exec(){
 
 _placeTitle(){
     TITLE="$1"
-    echo -e "\n${YELLOW}$TITLE${NORM}"
+    echo "\n${YELLOW}$TITLE${NORM}"
 }
 
 _placeLine(){
