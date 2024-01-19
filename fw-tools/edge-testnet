@@ -93,14 +93,14 @@ test_bootstrap() {
 # - $2 - port to connect to, default 5684
 test_lwm2m() {
     local URL=$1
-    URL=${1:-"https://lwm2m.us-east-1.mbedcloud.com"}
+    URL=${1:-"lwm2m.us-east-1.mbedcloud.com"}
     local PORT
     PORT=${2:-"5684"}
     verbose "Test LwM2M server connection (port $port) to $1"
     verbose "-----------------------------------------------"
     verbose "Uses openssl to connect to LwM2M server $URL:$port using device credentials."
     verbose "Write openssl output to $LWT."
-    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect "${URL}":"$PORT" 2>"$LWT" >"$LWT"
+    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect "${URL}:$PORT" 2>"$LWT" >"$LWT"
     # get openssl return code
     RESULT=$(grep "Verify return code" "$LWT")
 
@@ -112,9 +112,9 @@ test_lwm2m() {
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
 
     if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to LwM2M server (port $port)"
+        clihelp::success "TLS to $URL server (port $PORT)"
     else
-        clihelp::failure "TLS to LwM2M server (port $port)"
+        clihelp::failure "TLS to $URL server (port $PORT)"
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
@@ -257,12 +257,13 @@ main() {
     test_L3
     test_L4
     test_bootstrap
-    test_lwm2m "https://lwm2m.us-east-1.mbedcloud.com"
-    test_lwm2m "https://tcp-lwm2m.us-east-1.mbedcloud.com"
+    test_lwm2m "lwm2m.us-east-1.mbedcloud.com"
+    test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com"
     port=443
     test_bootstrap
-    test_lwm2m "https://lwm2m.us-east-1.mbedcloud.com" 443
-    test_lwm2m "https://tcp-lwm2m.us-east-1.mbedcloud.com" 443
+    # Port 443 only on tcp-lwm2m URL
+    # test_lwm2m "lwm2m.us-east-1.mbedcloud.com" 443
+    test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com" 443
     # K8S and Gateway server only operate on port 443
     test_k8s
     test_gateway
