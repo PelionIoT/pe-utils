@@ -9,6 +9,7 @@
 #   allows you to use port 443 as well.
 # - k8s and gateway service is available only via port 443.
 #
+DEBUG=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
@@ -85,12 +86,21 @@ test_bootstrap() {
     fi
 }
 
+# test_lwm2m - test openssl connect to LwM2M server
+#
+# Arguments (optional)
+# - $1 - URL to connect to, default https://lwm2m.us-east-1.mbedcloud.com
+# - $2 - port to connect to, default 5684
 test_lwm2m() {
-    verbose "Test LwM2M server connection (port $port)"
-    verbose "----------------------------------------"
-    verbose "Uses openssl to connect to LwM2M server using device credentials."
+    local URL=$1
+    URL=${1:-"https://lwm2m.us-east-1.mbedcloud.com"}
+    local PORT
+    PORT=${2:-"5684"}
+    verbose "Test LwM2M server connection (port $port) to $1"
+    verbose "-----------------------------------------------"
+    verbose "Uses openssl to connect to LwM2M server $URL:$port using device credentials."
     verbose "Write openssl output to $LWT."
-    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect lwm2m.us-east-1.mbedcloud.com:"$port" 2>"$LWT" >"$LWT"
+    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect "${URL}":"$PORT" 2>"$LWT" >"$LWT"
     # get openssl return code
     RESULT=$(grep "Verify return code" "$LWT")
 
@@ -196,6 +206,7 @@ test_L3() {
     verbose "---------------------------------"
     _url bootstrap.us-east-1.mbedcloud.com
     _url lwm2m.us-east-1.mbedcloud.com
+    _url tcp-lwm2m.us-east-1.mbedcloud.com
     # Check if we're running as a snap or not and change port accordingly.
     # If env variable SNAP exists, we're running as SNAP.
     if [[ -n "${SNAP}" ]]; then
@@ -223,6 +234,8 @@ test_L4() {
     _nc bootstrap.us-east-1.mbedcloud.com 5684
     _nc lwm2m.us-east-1.mbedcloud.com 443
     _nc lwm2m.us-east-1.mbedcloud.com 5684
+    _nc tcp-lwm2m.us-east-1.mbedcloud.com 443
+    _nc tcp-lwm2m.us-east-1.mbedcloud.com 5684
     _nc k8s.us-east-1.mbedcloud.com 443
     _nc gateways.us-east-1.mbedcloud.com 443
     _nc containers.us-east-1.mbedcloud.com 443
@@ -244,10 +257,12 @@ main() {
     test_L3
     test_L4
     test_bootstrap
-    test_lwm2m
+    test_lwm2m "https://lwm2m.us-east-1.mbedcloud.com"
+    test_lwm2m "https://tcp-lwm2m.us-east-1.mbedcloud.com"
     port=443
     test_bootstrap
-    test_lwm2m
+    test_lwm2m "https://lwm2m.us-east-1.mbedcloud.com" 443
+    test_lwm2m "https://tcp-lwm2m.us-east-1.mbedcloud.com" 443
     # K8S and Gateway server only operate on port 443
     test_k8s
     test_gateway
@@ -267,10 +282,12 @@ displayHelp() {
 }
 
 argprocessor() {
-    while getopts "hHdv" optsin; do
+    while getopts "hHdev" optsin; do
         case "${optsin}" in
             #
             d) DONTDELETE=1 ;;
+            #
+            e) DEBUG=1 ;;
             #
             h) displayHelp ;;
             #
@@ -290,6 +307,10 @@ argprocessor() {
         displayHelp
     else
         shift
+        # set echo on if DEBUG=1
+        if [[ "$DEBUG" -eq 1 ]]; then
+            set -x
+        fi
         main "$@"
     fi
 }
