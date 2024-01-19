@@ -262,7 +262,7 @@ main() {
     port=443
     test_bootstrap
     # Port 443 only on tcp-lwm2m URL
-    # test_lwm2m "lwm2m.us-east-1.mbedcloud.com" 443
+    test_lwm2m "lwm2m.us-east-1.mbedcloud.com" 443
     test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com" 443
     # K8S and Gateway server only operate on port 443
     test_k8s
