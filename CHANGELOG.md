@@ -1,6 +1,7 @@
 ## Izuma Edge utilities 2.3.2
 1. [fw-tools] - add `tcp-lwm2m.mbedcloud.com` address to be tested.
 1. [fw-tools] - add option `-e` for echoing/debugging the script.
+1. [fw-tools] - improve error checking.
 
 ## Izuma Edge utilities 2.3.1
 1. [edge-info] - remove echo $NORM at beginning of firmware info, it's not coming out right.
