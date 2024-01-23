@@ -106,7 +106,6 @@ test_lwm2m() {
 
     if [ -z "$RESULT" ]; then
         clihelp::failure "openssl failed with: $(cat "$LWT")"
-        exit
     fi
     # print result
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
@@ -196,7 +195,7 @@ test_registry() {
 
 test_L3() {
     _url() {
-        if [[ $(ping -q -c 1 "$1" >>"$L3T" 2>&1) -eq 0 ]]; then
+        if ping -q -c 1 "$1" >>"$L3T" 2>&1; then
             clihelp::success "ping $1"
         else
             clihelp::failure "ping $1"
@@ -221,8 +220,8 @@ test_L3() {
 }
 
 test_L4() {
-    _nc() {
-        if [[ $(nc -v -w 1 "$1" "$2" >>"$L4T" 2>&1) -eq 0 ]]; then
+    _nc(){
+        if nc -v -w 1 "$1" "$2" >>"$L4T" 2>&1; then
             clihelp::success "netcat $1 $2"
         else
             clihelp::failure "netcat $1 $2"
