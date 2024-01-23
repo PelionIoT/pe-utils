@@ -1,5 +1,8 @@
 ## Izuma Edge utilities 2.3.3
-1. [fw-tools] - fix edge-k8s URL. Check return code of openssl calls. Return non-zero exit code if any failures spotted.
+1. [fw-tools] - fix edge-k8s URL.
+1. [fw-tools] - Check return code of `openssl` calls. 
+1. [fw-tools] - Return non-zero exit code if any failures spotted.
+1. [fw-tools] - Skip L4 / netcat tests if BusyBox `nc` is detected (as it does not support DNS queries).
 
 ## Izuma Edge utilities 2.3.2
 1. [fw-tools] - add `tcp-lwm2m.mbedcloud.com` address to be tested.
