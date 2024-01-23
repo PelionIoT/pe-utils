@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.3
+1. [fw-tools] - fix edge-k8s URL. Check return code of openssl calls. Return non-zero exit code if any failures spotted.
+
 ## Izuma Edge utilities 2.3.2
 1. [fw-tools] - add `tcp-lwm2m.mbedcloud.com` address to be tested.
 1. [fw-tools] - add option `-e` for echoing/debugging the script.
