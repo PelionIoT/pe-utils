@@ -14,7 +14,7 @@ jobs:
       - name: Shellcheck fw-tools/edge-testnet
         run: |
           shellcheck fw-tools/edge-testnet
-          fw-tools/edge-testnet
+          fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
       - run: edge-info/edge-info
