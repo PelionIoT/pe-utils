@@ -10,6 +10,7 @@
 # - k8s and gateway service is available only via port 443.
 #
 DEBUG=0
+FAILURES=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
@@ -67,12 +68,19 @@ test_bootstrap() {
     verbose "--------------------------------------------"
     verbose "Uses openssl to connect to bootstrap server using device credentials."
     verbose "Write openssl output to $bootT."
-    echo | openssl s_client -CAfile "$CRED_DIR/bootstrap.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect tcp-bootstrap.us-east-1.mbedcloud.com:"$port" 2>"$bootT" >"$bootT"
-
+    if ! echo | openssl s_client -CAfile "$CRED_DIR/bootstrap.pem" \
+        -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" \
+        -connect tcp-bootstrap.us-east-1.mbedcloud.com:"$port" 2>"$bootT" >"$bootT"
+    then
+        clihelp::failure "openssl failed with: $(cat "$bootT")"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
     # get openssl return code
     RESULT=$(grep 'Verify return code' "$bootT")
     if [ -z "$RESULT" ]; then
         clihelp::failure "openssl failed with: $(cat "$bootT")"
+        FAILURES=$((FAILURES + 1))
     fi
     # print result
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
@@ -83,6 +91,7 @@ test_bootstrap() {
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
+        FAILURES=$((FAILURES + 1))
     fi
 }
 
@@ -100,7 +109,15 @@ test_lwm2m() {
     verbose "-----------------------------------------------"
     verbose "Uses openssl to connect to LwM2M server $URL:$port using device credentials."
     verbose "Write openssl output to $LWT."
-    echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" -connect "${URL}:$PORT" 2>"$LWT" >"$LWT"
+    if ! echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" \
+         -key "$CRED_DIR/device01_key.pem" \
+         -cert "$CRED_DIR/device01_cert.pem" \
+         -connect "${URL}:$PORT" 2>"$LWT" >"$LWT"
+    then
+        clihelp::failure "openssl failed with: $(cat "$LWT")"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
     # get openssl return code
     RESULT=$(grep "Verify return code" "$LWT")
 
@@ -121,11 +138,16 @@ test_lwm2m() {
 }
 
 test_k8s() {
-    verbose "Test k8s server connection (port $port)"
-    verbose "-------------------------------------"
+    verbose "Test edge-k8s server connection (port $port)"
+    verbose "--------------------------------------------"
     verbose "Uses openssl to connect to k8s server."
     verbose "Write openssl output to $k8T."
-    echo | openssl s_client -connect k8s.us-east-1.mbedcloud.com:"$port" 2>"$k8T" >"$k8T"
+    if ! echo | openssl s_client -connect edge-k8s.us-east-1.mbedcloud.com:"$port" 2>"$k8T" >"$k8T"
+    then
+        clihelp::failure "openssl failed with: $(cat "$k8T")"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
 
     # get openssl return code
     RESULT=$(grep 'Verify return code' "$bootT")
@@ -135,9 +157,9 @@ test_k8s() {
     # print result
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
     if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to k8s server (port $port)"
+        clihelp::success "TLS to edge-k8s server (port $port)"
     else
-        clihelp::failure "TLS to k8s server (port $port)"
+        clihelp::failure "TLS to edge-k8s server (port $port)"
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
@@ -149,7 +171,12 @@ test_gateway() {
     verbose "------------------------------------------"
     verbose "Uses openssl to connect to gateway server."
     verbose "Write openssl output to $gwT."
-    echo | openssl s_client -connect gateways.us-east-1.mbedcloud.com:"$port" 2>"$gwT" >"$gwT"
+    if ! echo | openssl s_client -connect gateways.us-east-1.mbedcloud.com:"$port" 2>"$gwT" >"$gwT"
+    then
+        clihelp::failure "openssl failed with: $(cat "$gwT")"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
 
     # get openssl return code
     RESULT=$(grep 'Verify return code' "$gwT")
@@ -165,6 +192,7 @@ test_gateway() {
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
+        FAILURES=$((FAILURES + 1))
     fi
 }
 
@@ -173,12 +201,18 @@ test_registry() {
     verbose "------------------------------------------------------"
     verbose "Uses openssl to connect to container registry."
     verbose "Write openssl output to $gwR."
-    echo | openssl s_client -connect containers.us-east-1.mbedcloud.com:"$port" 2>"$gwR" >"$gwR"
+    if ! echo | openssl s_client -connect containers.us-east-1.mbedcloud.com:"$port" 2>"$gwR" >"$gwR"
+    then
+        clihelp::failure "openssl failed with: $(cat "$gwR")"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
 
     # get openssl return code
     RESULT=$(grep 'Verify return code' "$gwR")
     if [ -z "$RESULT" ]; then
         clihelp::failure "openssl failed with: $(cat "$gwR")"
+        FAILURES=$((FAILURES + 1))
     fi
     # print result
     CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
@@ -189,6 +223,7 @@ test_registry() {
         echo "--------------"
         echo "$RESULT"
         echo "--------------"
+        FAILURES=$((FAILURES + 1))
     fi
 }
 
@@ -199,6 +234,8 @@ test_L3() {
             clihelp::success "ping $1"
         else
             clihelp::failure "ping $1"
+            cat "$L3T"
+            FAILURES=$((FAILURES + 1))
         fi
     }
     verbose "Test Layer 3 (requires icmp ping)"
@@ -225,6 +262,7 @@ test_L4() {
             clihelp::success "netcat $1 $2"
         else
             clihelp::failure "netcat $1 $2"
+            FAILURES=$((FAILURES + 1))
         fi
     }
     verbose "Test Layer 4 (requires nc)"
@@ -235,7 +273,7 @@ test_L4() {
     _nc lwm2m.us-east-1.mbedcloud.com 5684
     _nc tcp-lwm2m.us-east-1.mbedcloud.com 443
     _nc tcp-lwm2m.us-east-1.mbedcloud.com 5684
-    _nc k8s.us-east-1.mbedcloud.com 443
+    _nc edge-k8s.us-east-1.mbedcloud.com 443
     _nc gateways.us-east-1.mbedcloud.com 443
     _nc containers.us-east-1.mbedcloud.com 443
     if [[ -n "${SNAP}" ]]; then
@@ -253,8 +291,18 @@ test_L4() {
 }
 
 main() {
-    test_L3
-    test_L4
+    pinggoogle=$(ping -q -c 1 google.com 2>&1)
+    if [[ "$pinggoogle" =~ "100% packet loss" ]]; then
+        echo "ICMP traffic blocked, skipping L3 (ping) tests."
+    else
+        test_L3
+    fi
+    busyboxnc=$(nc 2>&1)
+    if [[ "$busyboxnc" =~ "BusyBox" ]]; then
+        echo "BusyBox netcat detected, skipping Layer 4 tests"
+    else
+        test_L4
+    fi
     test_bootstrap
     test_lwm2m "lwm2m.us-east-1.mbedcloud.com"
     test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com"
@@ -271,6 +319,12 @@ main() {
         rm -rf "$temp"
     else
         echo "Your files are preserved at $temp"
+    fi
+    if [[ "$FAILURES" -eq 0 ]]; then
+        echo "All tests passed."
+    else
+        echo "Some tests failed."
+        exit 1
     fi
 }
 

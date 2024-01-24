@@ -1,7 +1,7 @@
 ## Todos
 
 - [ ] Changelog updated
-- [ ] Run `shellcheck` or `pysh-check` before committing code - no more warnings than earlier (preferrably less)
+- [ ] Run `shellcheck` or `pysh-check` before committing code - no more warnings than earlier (preferably less)
 - [ ] Will tag a proper release, if need be.
 - [ ] Will update required recipes/builds as well.
 - [ ] Will update also the versions to relevant places:

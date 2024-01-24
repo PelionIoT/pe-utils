@@ -6,15 +6,16 @@ concurrency:
   group: pe-utils-'${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 jobs:
-  run-shellcheck:
+  run-shellcheck-and-scripts:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - run: shellcheck --version
       - name: Shellcheck fw-tools/edge-testnet
-        run: |
-          shellcheck fw-tools/edge-testnet
-          fw-tools/edge-testnet
+        run: shellcheck fw-tools/edge-testnet
+      - name: Run edge-testnet
+        run: | 
+          fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
       - run: edge-info/edge-info
