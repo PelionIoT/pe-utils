@@ -3,6 +3,7 @@
 1. [fw-tools] - Check return code of `openssl` calls. 
 1. [fw-tools] - Return non-zero exit code if any failures spotted.
 1. [fw-tools] - Skip L4 / netcat tests if BusyBox `nc` is detected (as it does not support DNS queries).
+1. [fw-tools] - Skip L3 / ping tests if 100% packet loss encountered with google.com. ICMP traffic is then most likely blocked.
 
 ## Izuma Edge utilities 2.3.2
 1. [fw-tools] - add `tcp-lwm2m.mbedcloud.com` address to be tested.

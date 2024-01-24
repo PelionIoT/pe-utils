@@ -291,7 +291,12 @@ test_L4() {
 }
 
 main() {
-    test_L3
+    pinggoogle=$(ping -q -c 1 google.com 2>&1)
+    if [[ "$pinggoogle" =~ "100% packet loss" ]]; then
+        echo "ICMP traffic blocked, skipping L3 (ping) tests."
+    else
+        test_L3
+    fi
     busyboxnc=$(nc 2>&1)
     if [[ "$busyboxnc" =~ "BusyBox" ]]; then
         echo "BusyBox netcat detected, skipping Layer 4 tests"

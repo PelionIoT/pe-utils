@@ -6,7 +6,7 @@ concurrency:
   group: pe-utils-'${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 jobs:
-  run-shellcheck:
+  run-shellcheck-and-scripts:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -15,9 +15,6 @@ jobs:
         run: shellcheck fw-tools/edge-testnet
       - name: Run edge-testnet
         run: | 
-          ping -h | true
-          ping -q -c 1 bootstrap.us-east-1.mbedcloud.com
-          ping -q -c 1 lwm2m.us-east-1.mbedcloud.com
           fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
