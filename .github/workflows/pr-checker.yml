@@ -16,6 +16,8 @@ jobs:
       - name: Run edge-testnet
         run: | 
           ping -h | true
+          ping -q -c 1 bootstrap.us-east-1.mbedcloud.com
+          ping -q -c 1 lwm2m.us-east-1.mbedcloud.com
           fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
