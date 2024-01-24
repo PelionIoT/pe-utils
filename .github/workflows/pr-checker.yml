@@ -15,7 +15,7 @@ jobs:
         run: shellcheck fw-tools/edge-testnet
       - name: Run edge-testnet
         run: | 
-          ping -h
+          ping -h | true
           fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
