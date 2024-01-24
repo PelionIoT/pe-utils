@@ -234,6 +234,7 @@ test_L3() {
             clihelp::success "ping $1"
         else
             clihelp::failure "ping $1"
+            cat "$L3T"
             FAILURES=$((FAILURES + 1))
         fi
     }
