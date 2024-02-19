@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2022 Izuma Networks
+# Copyright (c) 2022-2024 Izuma Networks
 # 
 # Check connectivity to Izuma Cloud services
 # - Via multiple ports (443, 5864)
@@ -150,7 +150,7 @@ test_k8s() {
     fi
 
     # get openssl return code
-    RESULT=$(grep 'Verify return code' "$bootT")
+    RESULT=$(grep 'Verify return code' "$k8T")
     if [ -z "$RESULT" ]; then
         clihelp::failure "openssl failed with: $(cat "$k8T")"
     fi

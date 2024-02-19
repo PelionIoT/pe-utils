@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.4
+1. [fw-tools] - fix the grepping of edge-K8s logfile.
+
 ## Izuma Edge utilities 2.3.3
 1. [fw-tools] - fix edge-k8s URL.
 1. [fw-tools] - Check return code of `openssl` calls. 
