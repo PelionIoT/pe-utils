@@ -252,7 +252,6 @@ test_L3() {
         _url canonical-lcy01.cdn.snapcraftcontent.com
         _url canonical-lcy02.cdn.snapcraftcontent.com
         _url canonical-bos01.cdn.snapcraftcontent.com
-        _url serial-vault-partners.canonical.com  
     fi
 }
 

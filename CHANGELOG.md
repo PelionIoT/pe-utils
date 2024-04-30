@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.5
+1. [fw-tools] - remove `ping` test from `serial-vault-partners.canonical.com`, it is not responding to `ping` anymore.
+
 ## Izuma Edge utilities 2.3.4
 1. [fw-tools] - fix the grepping of edge-K8s logfile.
 
