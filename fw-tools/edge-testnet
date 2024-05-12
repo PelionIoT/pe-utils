@@ -14,13 +14,18 @@ FAILURES=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
-bootT=$temp/bootstrap.txt
-k8T=$temp/k8s.txt
-gwT=$temp/gateway.txt
-LWT=$temp/test-lwm2m.txt
+# shellcheck disable=SC2034
+bootstrap_log=$temp/bootstrap.txt
+# shellcheck disable=SC2034
+edgek8s_log=$temp/k8s.txt
+# shellcheck disable=SC2034
+gateways_log=$temp/gateway.txt
+# shellcheck disable=SC2034
+lwm2m_log=$temp/test-lwm2m.txt
+# shellcheck disable=SC2034
+containers_log=$temp/registry.txt
 L3T=$temp/layer3.txt
 L4T=$temp/layer4.txt
-gwR=$temp/registry.txt
 
 # For faster testing w/o actually building the whole snap
 #SNAP="snap-test"
@@ -28,7 +33,6 @@ gwR=$temp/registry.txt
 VERBOSE=0
 DONTDELETE=0
 
-port=5684
 NORM="\u001b[0m"
 #BOLD="\u001b[1m"
 #REV="\u001b[7m"
@@ -63,166 +67,125 @@ verbose() {
     fi
 }
 
-test_bootstrap() {
-    verbose "Test bootstrap server connection (port $port)"
-    verbose "--------------------------------------------"
-    verbose "Uses openssl to connect to bootstrap server using device credentials."
-    verbose "Write openssl output to $bootT."
-    if ! echo | openssl s_client -CAfile "$CRED_DIR/bootstrap.pem" \
-        -key "$CRED_DIR/device01_key.pem" -cert "$CRED_DIR/device01_cert.pem" \
-        -connect tcp-bootstrap.us-east-1.mbedcloud.com:"$port" 2>"$bootT" >"$bootT"
-    then
-        clihelp::failure "openssl failed with: $(cat "$bootT")"
-        FAILURES=$((FAILURES + 1))
-        return
-    fi
-    # get openssl return code
-    RESULT=$(grep 'Verify return code' "$bootT")
-    if [ -z "$RESULT" ]; then
-        clihelp::failure "openssl failed with: $(cat "$bootT")"
-        FAILURES=$((FAILURES + 1))
-    fi
-    # print result
-    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
-    if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to bootstrap server (port $port)"
+# Extract the server name from the URL - bootstrap/lwm2m/edge-k8s/gateways/containers
+# If the URL starts with "edge-k8s", the server name will be from the begining until the second hyphen or the first dot.
+# If the URL starts with "tcp-"/"udp-", the server name will come after "tcp-"/"udp-" until the first dot or hyphen
+# In other cases the server name will be from the beginning until the first dot or hyphen
+#
+# Arguments (required)
+# - $1 - URL
+# - $2 - OUTPUT - the server name extracted from the URL
+extract_server_name() {
+    local URL="$1"
+    local -n OUTPUT="$2"
+    local RESULT=""
+
+    if [[ $URL =~ ^(edge-k8s) ]]; then
+        # If the URL starts with edge-k8s,
+        # Extract the substring from the begining until the second hyphen
+        # Or from the beginning until the first dot.
+        # In practice it will be "edge-k8s".
+        RESULT=$(echo "$URL" | grep -o '^[^-]*-[^-]*' | grep -o '^[^.]*')       
+    elif [[ $URL =~ ^(tcp-|udp-) ]]; then
+        # If the URL starts with "tcp-" or "udp-",
+        # Extract the substring after "tcp-" or "udp-" until the first dot or hyphen.
+        RESULT="${URL#"${BASH_REMATCH[0]}"}"
+        RESULT="${RESULT%%[.-]*}"
     else
-        clihelp::failure "TLS to bootstrap server (port $port)"
-        echo "--------------"
-        echo "$RESULT"
-        echo "--------------"
-        FAILURES=$((FAILURES + 1))
-    fi
+        # In other cases,
+        # Extract the substring from the beginning until the first dot or hyphen.        
+        RESULT="${URL%%[.-]*}"
+    fi    
+
+    verbose "server name is $RESULT"
+	# shellcheck disable=SC2034
+    OUTPUT="$RESULT"
 }
 
-# test_lwm2m - test openssl connect to LwM2M server
+# test_server_with_openssl - test openssl connect with the URL
 #
-# Arguments (optional)
-# - $1 - URL to connect to, default https://lwm2m.us-east-1.mbedcloud.com
-# - $2 - port to connect to, default 5684
-test_lwm2m() {
+# Arguments (required)
+# - $1 - URL to connect to
+# - $2 - port to connect to
+test_server_with_openssl() {
     local URL=$1
-    URL=${1:-"lwm2m.us-east-1.mbedcloud.com"}
-    local PORT
-    PORT=${2:-"5684"}
-    verbose "Test LwM2M server connection (port $port) to $1"
-    verbose "-----------------------------------------------"
-    verbose "Uses openssl to connect to LwM2M server $URL:$port using device credentials."
-    verbose "Write openssl output to $LWT."
-    if ! echo | openssl s_client -CAfile "$CRED_DIR/lwm2m.pem" \
-         -key "$CRED_DIR/device01_key.pem" \
-         -cert "$CRED_DIR/device01_cert.pem" \
-         -connect "${URL}:$PORT" 2>"$LWT" >"$LWT"
-    then
-        clihelp::failure "openssl failed with: $(cat "$LWT")"
+    local PORT=$2
+
+    local SERVER_NAME=""
+    
+    extract_server_name "$URL" SERVER_NAME
+    
+    # The log file name must be without hyphen (bash scripts don't support variable names with hyphen)
+    # The hypen is removed and "_log" is added.
+    # Can happen in case of edge-k8s    
+    local LOG_FILE_NAME="${SERVER_NAME//-/}_log"
+    LOG_FILE_NAME=${!LOG_FILE_NAME}
+    
+    local is_bs_or_lwm2m=0
+    if [[ "$SERVER_NAME" == "bootstrap" || "$SERVER_NAME" == "lwm2m" ]]; then
+        is_bs_or_lwm2m=1
+    fi
+
+    verbose "Test $SERVER_NAME server connection (port $PORT)"
+    verbose "------------------------------------------------"
+
+    local COMMAND=""
+    # If the SKIP_CERT_VALID flag is off and the service is bootstrap or LwM2M
+    # Use the keys and the certificate for TLS connection.
+    if [[ $SKIP_CERT_VALID -ne 1 && $is_bs_or_lwm2m -eq 1 ]]; then
+        verbose "Uses openssl to connect to $SERVER_NAME server using device credentials."
+        verbose "Write openssl output to $LOG_FILE_NAME."
+        
+        COMMAND="openssl s_client -CAfile ${CRED_DIR}/${SERVER_NAME}.pem \
+            -key ${CRED_DIR}/device01_key.pem -cert ${CRED_DIR}/device01_cert.pem \
+            -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1"
+    else 
+        COMMAND="openssl s_client -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1"
+    fi
+    
+    # If the SKIP_CERT_VALID flag is off or the service is not bootstrap/lwm2m 
+    # The command should pass successfully
+    # Else, the command is evaluated but its response isn't checked
+    if [[ $SKIP_CERT_VALID -ne 1 || $is_bs_or_lwm2m -ne 1 ]]; then
+        if ! echo | eval "$COMMAND"
+        then
+            clihelp::failure "TLS to $URL server (port $PORT)"
+            if [[ "$VERBOSE" -eq 1 ]]; then
+                cat "$LOG_FILE_NAME"
+            fi
+            FAILURES=$((FAILURES + 1))
+            return
+        fi
+    else
+        eval "$COMMAND"
+    fi
+    
+    # get openssl return code
+    RESULT=$(grep 'Verify return code' "$LOG_FILE_NAME")
+    if [ -z "$RESULT" ]; then
+        clihelp::failure "TLS to $URL server (port $PORT)"
+        if [[ "$VERBOSE" -eq 1 ]]; then
+            cat "$LOG_FILE_NAME"
+        fi
         FAILURES=$((FAILURES + 1))
         return
     fi
-    # get openssl return code
-    RESULT=$(grep "Verify return code" "$LWT")
 
-    if [ -z "$RESULT" ]; then
-        clihelp::failure "openssl failed with: $(cat "$LWT")"
+    #Check the return code
+    local EXP_CODE="0"
+    # If the SKIP_CERT_VALID flag is off and the service is bootstrap or LwM2M
+    # The return code will be 21
+    if [[ $SKIP_CERT_VALID -eq 1 && $is_bs_or_lwm2m -eq 1 ]]; then
+        EXP_CODE="21"
     fi
-    # print result
-    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
-
-    if [ "$CODE" = 0 ]; then
+    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}') 
+    if [ "$CODE" == "$EXP_CODE" ]; then
         clihelp::success "TLS to $URL server (port $PORT)"
     else
         clihelp::failure "TLS to $URL server (port $PORT)"
-        echo "--------------"
-        echo "$RESULT"
-        echo "--------------"
-    fi
-}
-
-test_k8s() {
-    verbose "Test edge-k8s server connection (port $port)"
-    verbose "--------------------------------------------"
-    verbose "Uses openssl to connect to k8s server."
-    verbose "Write openssl output to $k8T."
-    if ! echo | openssl s_client -connect edge-k8s.us-east-1.mbedcloud.com:"$port" 2>"$k8T" >"$k8T"
-    then
-        clihelp::failure "openssl failed with: $(cat "$k8T")"
-        FAILURES=$((FAILURES + 1))
-        return
-    fi
-
-    # get openssl return code
-    RESULT=$(grep 'Verify return code' "$k8T")
-    if [ -z "$RESULT" ]; then
-        clihelp::failure "openssl failed with: $(cat "$k8T")"
-    fi
-    # print result
-    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
-    if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to edge-k8s server (port $port)"
-    else
-        clihelp::failure "TLS to edge-k8s server (port $port)"
-        echo "--------------"
-        echo "$RESULT"
-        echo "--------------"
-    fi
-}
-
-test_gateway() {
-    verbose "Test gateway server connection (port $port)"
-    verbose "------------------------------------------"
-    verbose "Uses openssl to connect to gateway server."
-    verbose "Write openssl output to $gwT."
-    if ! echo | openssl s_client -connect gateways.us-east-1.mbedcloud.com:"$port" 2>"$gwT" >"$gwT"
-    then
-        clihelp::failure "openssl failed with: $(cat "$gwT")"
-        FAILURES=$((FAILURES + 1))
-        return
-    fi
-
-    # get openssl return code
-    RESULT=$(grep 'Verify return code' "$gwT")
-    if [ -z "$RESULT" ]; then
-        clihelp::failure "openssl failed with: $(cat "$gwT")"
-    fi
-    # print result
-    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
-    if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to gateway server (port $port)"
-    else
-        clihelp::failure "TLS to gateway server (port $port)"
-        echo "--------------"
-        echo "$RESULT"
-        echo "--------------"
-        FAILURES=$((FAILURES + 1))
-    fi
-}
-
-test_registry() {
-    verbose "Test container registry server connection (port $port)"
-    verbose "------------------------------------------------------"
-    verbose "Uses openssl to connect to container registry."
-    verbose "Write openssl output to $gwR."
-    if ! echo | openssl s_client -connect containers.us-east-1.mbedcloud.com:"$port" 2>"$gwR" >"$gwR"
-    then
-        clihelp::failure "openssl failed with: $(cat "$gwR")"
-        FAILURES=$((FAILURES + 1))
-        return
-    fi
-
-    # get openssl return code
-    RESULT=$(grep 'Verify return code' "$gwR")
-    if [ -z "$RESULT" ]; then
-        clihelp::failure "openssl failed with: $(cat "$gwR")"
-        FAILURES=$((FAILURES + 1))
-    fi
-    # print result
-    CODE=$(echo "$RESULT" | awk -F' ' '{print $4}')
-    if [ "$CODE" = 0 ]; then
-        clihelp::success "TLS to registry server (port $port)"
-    else
-        clihelp::failure "TLS to registry server (port $port)"
-        echo "--------------"
-        echo "$RESULT"
-        echo "--------------"
+        verbose "--------------"
+        verbose "$RESULT"
+        verbose "--------------"
         FAILURES=$((FAILURES + 1))
     fi
 }
@@ -230,19 +193,35 @@ test_registry() {
 
 test_L3() {
     _url() {
-        if ping -q -c 1 "$1" >>"$L3T" 2>&1; then
-            clihelp::success "ping $1"
+        local URL=$1
+
+        if ping -q -c 1 "$URL" >>"$L3T" 2>&1; then
+            clihelp::success "ping $URL"
         else
-            clihelp::failure "ping $1"
-            cat "$L3T"
+            clihelp::failure "ping $URL"
+            if [[ "$VERBOSE" -eq 1 ]]; then
+                cat "$L3T"
+            fi
             FAILURES=$((FAILURES + 1))
         fi
     }
+    
+    _url_test_server_tcp_udp() {
+        local SERVER_NAME=$1
+        
+        _url "$SERVER_NAME""$DOMAIN_NAME"
+        _url tcp-"$SERVER_NAME""$DOMAIN_NAME"
+        if [[ "$TEST_UDP" -eq 1 ]]; then
+            _url udp-"$SERVER_NAME""$DOMAIN_NAME"
+        fi
+    }
+
     verbose "Test Layer 3 (requires icmp ping)"
     verbose "---------------------------------"
-    _url bootstrap.us-east-1.mbedcloud.com
-    _url lwm2m.us-east-1.mbedcloud.com
-    _url tcp-lwm2m.us-east-1.mbedcloud.com
+
+    _url_test_server_tcp_udp bootstrap
+    _url_test_server_tcp_udp lwm2m
+
     # Check if we're running as a snap or not and change port accordingly.
     # If env variable SNAP exists, we're running as SNAP.
     if [[ -n "${SNAP}" ]]; then
@@ -257,24 +236,40 @@ test_L3() {
 
 test_L4() {
     _nc(){
-        if nc -v -w 1 "$1" "$2" >>"$L4T" 2>&1; then
-            clihelp::success "netcat $1 $2"
+        local URL=$1
+        local PORT=$2
+
+        if nc -v -w 1 "$URL" "$PORT" >>"$L4T" 2>&1; then
+            clihelp::success "netcat $URL $PORT"
         else
-            clihelp::failure "netcat $1 $2"
+            clihelp::failure "netcat $URL $PORT"
             FAILURES=$((FAILURES + 1))
         fi
     }
+    
+    _nc_test_server_tcp_udp() {
+        local SERVER_NAME=$1
+        local PORTS=(5684 443)
+
+        for PORT in "${PORTS[@]}"; do
+            _nc "$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            _nc tcp-"$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            if [[ "$TEST_UDP" -eq 1 ]]; then
+                _nc udp-"$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            fi
+        done
+            
+    }
+
     verbose "Test Layer 4 (requires nc)"
     verbose "--------------------------"
-    _nc bootstrap.us-east-1.mbedcloud.com 443
-    _nc bootstrap.us-east-1.mbedcloud.com 5684
-    _nc lwm2m.us-east-1.mbedcloud.com 443
-    _nc lwm2m.us-east-1.mbedcloud.com 5684
-    _nc tcp-lwm2m.us-east-1.mbedcloud.com 443
-    _nc tcp-lwm2m.us-east-1.mbedcloud.com 5684
-    _nc edge-k8s.us-east-1.mbedcloud.com 443
-    _nc gateways.us-east-1.mbedcloud.com 443
-    _nc containers.us-east-1.mbedcloud.com 443
+    
+    _nc_test_server_tcp_udp bootstrap
+    _nc_test_server_tcp_udp lwm2m
+
+    _nc edge-k8s"$DOMAIN_NAME" 443
+    _nc gateways"$DOMAIN_NAME" 443
+    _nc containers"$DOMAIN_NAME" 443
     if [[ -n "${SNAP}" ]]; then
         # https://snapcraft.io/docs/network-requirements
         _nc api.snapcraft.io 443
@@ -289,6 +284,30 @@ test_L4() {
     fi
 }
 
+test_TLS() {
+    _TLS_test_server_tcp_udp() {
+        local SERVER_NAME=$1        
+        local PORTS=(5684 443)
+        
+        for PORT in "${PORTS[@]}"; do
+            test_server_with_openssl "$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            test_server_with_openssl tcp-"$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            if [[ "$TEST_UDP" -eq 1 ]]; then
+                test_server_with_openssl udp-"$SERVER_NAME""$DOMAIN_NAME" "$PORT"
+            fi
+        done
+    }
+    verbose "Test Layer TLS"
+    verbose "--------------------------"
+
+    _TLS_test_server_tcp_udp bootstrap
+    _TLS_test_server_tcp_udp lwm2m
+    
+    test_server_with_openssl gateways"$DOMAIN_NAME" 443
+    test_server_with_openssl edge-k8s"$DOMAIN_NAME" 443
+    test_server_with_openssl containers"$DOMAIN_NAME" 443   
+}
+
 main() {
     pinggoogle=$(ping -q -c 1 google.com 2>&1)
     if [[ "$pinggoogle" =~ "100% packet loss" ]]; then
@@ -296,24 +315,16 @@ main() {
     else
         test_L3
     fi
+
     busyboxnc=$(nc 2>&1)
     if [[ "$busyboxnc" =~ "BusyBox" ]]; then
         echo "BusyBox netcat detected, skipping Layer 4 tests"
     else
         test_L4
     fi
-    test_bootstrap
-    test_lwm2m "lwm2m.us-east-1.mbedcloud.com"
-    test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com"
-    port=443
-    test_bootstrap
-    # Port 443 only on tcp-lwm2m URL
-    test_lwm2m "lwm2m.us-east-1.mbedcloud.com" 443
-    test_lwm2m "tcp-lwm2m.us-east-1.mbedcloud.com" 443
-    # K8S and Gateway server only operate on port 443
-    test_k8s
-    test_gateway
-    test_registry
+
+    test_TLS
+    
     if [[ "$DONTDELETE" -eq 0 ]]; then
         rm -rf "$temp"
     else
@@ -327,44 +338,88 @@ main() {
     fi
 }
 
-displayHelp() {
+usage() {
     echo "Usage: $0 -options"
     echo "  -d do not delete temporary storage"
     echo "  -v verbose output"
+    echo "  -e debug"    
+    echo "  -s skip cert validation in TLS tests"
+    echo "  -h/-H show this help dialog"
+    echo "  --domain  domain name"
+    echo "  --env environment. Can be integration/os2/production"
+    echo "  etiher --domain or --env must be supplied"
     exit
 }
 
 argprocessor() {
-    while getopts "hHdev" optsin; do
-        case "${optsin}" in
+    args=$(getopt -o hHdevs --l udp,env:,domain: -- "$@")
+    
+    if [[ -z "$args" ]]; then
+        usage
+    fi
+
+    eval set -- "${args}"
+    
+    while :
+    do
+        case $1 in
+            -d) DONTDELETE=1; shift ;;
             #
-            d) DONTDELETE=1 ;;
+            -e) DEBUG=1; shift ;;
             #
-            e) DEBUG=1 ;;
+            -h) displayHelp; shift ;;
             #
-            h) displayHelp ;;
+            -H) displayHelp; shift ;;
             #
-            H) displayHelp ;;
+            -v) VERBOSE=1; shift ;;
             #
-            v) VERBOSE=1 ;;
+            -s) SKIP_CERT_VALID=1; shift;;
             #
-            \?)
-                echo -e "Option -$OPTARG not allowed.\n "
-                displayHelp
-                ;;
-                #
+            --udp) TEST_UDP=1; shift;;
+            #
+            --env) ENV="$2"; shift 2 ;;
+            #
+            --domain) DOMAIN_NAME="$2"; shift 2 ;;
+            #
+            --) shift; break ;;
+            *) >&2 echo Unsupported option: "$1"
+              usage ;;
         esac
     done
-    shift $((OPTIND - 1))
-    if [[ $# -ne 0 ]]; then
-        displayHelp
-    else
-        shift
-        # set echo on if DEBUG=1
-        if [[ "$DEBUG" -eq 1 ]]; then
-            set -x
-        fi
-        main "$@"
+    
+    # set echo on if DEBUG=1
+    if [[ "$DEBUG" -eq 1 ]]; then
+        set -x
     fi
+    
+    # Check if either --env or --domain arguments were provided
+    if [[ -z "$ENV" && -z "$DOMAIN_NAME" ]]; then
+        echo "Both --env or --domain argument weren't supplied."
+        echo "One of them must be supplied"
+        usage
+        exit 1
+    elif [[ -n "$ENV" && -n "$DOMAIN_NAME" ]]; then
+        echo "Both --env or --domain argument were supplied."
+        echo "Only one of them must be supplied"
+        usage
+        exit 1
+    fi
+    
+    # Check if --env is integration/os2/production.
+    if [[ -n "$ENV" ]]; then
+        if [[ "$ENV" == "integration" ]]; then
+            DOMAIN_NAME="-integration-lab.mbedcloudintegration.net"
+        elif [[ "$ENV" == "os2" ]]; then
+            DOMAIN_NAME="-os2.mbedcloudstaging.net"
+        elif [[ "$ENV" == "production" ]]; then
+            DOMAIN_NAME=".us-east-1.mbedcloud.com"
+        else
+            echo "--env parameter should be integration/os2/production"
+            usage
+            exit 1
+        fi
+    fi
+
+    main "$@"    
 }
 argprocessor "$@"
