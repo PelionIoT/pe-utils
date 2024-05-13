@@ -267,9 +267,9 @@ test_L4() {
     _nc_test_server_tcp_udp bootstrap
     _nc_test_server_tcp_udp lwm2m
 
-    _nc edge-k8s"$DOMAIN_NAME" 443
-    _nc gateways"$DOMAIN_NAME" 443
-    _nc containers"$DOMAIN_NAME" 443
+    _nc edge-k8s"$DOMAIN_NAME_EDGE" 443
+    _nc gateways"$DOMAIN_NAME_EDGE" 443
+    _nc containers"$DOMAIN_NAME_EDGE" 443
     if [[ -n "${SNAP}" ]]; then
         # https://snapcraft.io/docs/network-requirements
         _nc api.snapcraft.io 443
@@ -303,9 +303,9 @@ test_TLS() {
     _TLS_test_server_tcp_udp bootstrap
     _TLS_test_server_tcp_udp lwm2m
     
-    test_server_with_openssl gateways"$DOMAIN_NAME" 443
-    test_server_with_openssl edge-k8s"$DOMAIN_NAME" 443
-    test_server_with_openssl containers"$DOMAIN_NAME" 443   
+    test_server_with_openssl gateways"$DOMAIN_NAME_EDGE" 443
+    test_server_with_openssl edge-k8s"$DOMAIN_NAME_EDGE" 443
+    test_server_with_openssl containers"$DOMAIN_NAME_EDGE" 443   
 }
 
 main() {
@@ -409,16 +409,23 @@ argprocessor() {
     if [[ -n "$ENV" ]]; then
         if [[ "$ENV" == "integration" ]]; then
             DOMAIN_NAME="-integration-lab.mbedcloudintegration.net"
+			DOMAIN_NAME_EDGE=".mbedcloudintegration.net"
         elif [[ "$ENV" == "os2" ]]; then
             DOMAIN_NAME="-os2.mbedcloudstaging.net"
+			DOMAIN_NAME_EDGE=".mbedcloudstaging.net"
         elif [[ "$ENV" == "production" ]]; then
             DOMAIN_NAME=".us-east-1.mbedcloud.com"
+			DOMAIN_NAME_EDGE="$DOMAIN_NAME"
         else
             echo "--env parameter should be integration/os2/production"
             usage
             exit 1
         fi
     fi
+	
+	if [[ -n "$DOMAIN_NAME" ]]; then
+	    DOMAIN_NAME_EDGE="$DOMAIN_NAME"
+	fi
 
     main "$@"    
 }
