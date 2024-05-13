@@ -98,7 +98,7 @@ extract_server_name() {
     fi    
 
     verbose "server name is $RESULT"
-	# shellcheck disable=SC2034
+    # shellcheck disable=SC2034
     OUTPUT="$RESULT"
 }
 
@@ -347,7 +347,8 @@ usage() {
     echo "  -h/-H show this help dialog"
     echo "  --domain  domain name"
     echo "  --env environment. Can be integration/os2/production"
-    echo "  etiher --domain or --env must be supplied"
+    echo "  if neither --domain or --env aren't supplied, the default is production env."
+    echo "  --domain and --env can't be supplied together."
     exit
 }
 
@@ -394,10 +395,8 @@ argprocessor() {
     
     # Check if either --env or --domain arguments were provided
     if [[ -z "$ENV" && -z "$DOMAIN_NAME" ]]; then
-        echo "Both --env or --domain argument weren't supplied."
-        echo "One of them must be supplied"
-        usage
-        exit 1
+        echo "The env will be set to production."
+        ENV="production"
     elif [[ -n "$ENV" && -n "$DOMAIN_NAME" ]]; then
         echo "Both --env or --domain argument were supplied."
         echo "Only one of them must be supplied"
@@ -409,23 +408,23 @@ argprocessor() {
     if [[ -n "$ENV" ]]; then
         if [[ "$ENV" == "integration" ]]; then
             DOMAIN_NAME="-integration-lab.mbedcloudintegration.net"
-			DOMAIN_NAME_EDGE=".mbedcloudintegration.net"
+            DOMAIN_NAME_EDGE=".mbedcloudintegration.net"
         elif [[ "$ENV" == "os2" ]]; then
             DOMAIN_NAME="-os2.mbedcloudstaging.net"
-			DOMAIN_NAME_EDGE=".mbedcloudstaging.net"
+            DOMAIN_NAME_EDGE=".mbedcloudstaging.net"
         elif [[ "$ENV" == "production" ]]; then
             DOMAIN_NAME=".us-east-1.mbedcloud.com"
-			DOMAIN_NAME_EDGE="$DOMAIN_NAME"
+            DOMAIN_NAME_EDGE="$DOMAIN_NAME"
         else
             echo "--env parameter should be integration/os2/production"
             usage
             exit 1
         fi
     fi
-	
-	if [[ -n "$DOMAIN_NAME" ]]; then
-	    DOMAIN_NAME_EDGE="$DOMAIN_NAME"
-	fi
+    
+    if [[ -n "$DOMAIN_NAME" ]]; then
+        DOMAIN_NAME_EDGE="$DOMAIN_NAME"
+    fi
 
     main "$@"    
 }
