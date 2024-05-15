@@ -9,10 +9,12 @@
 #   allows you to use port 443 as well.
 # - k8s and gateway service is available only via port 443.
 #
-set -e
+set -eu
 
 DEBUG=0
 FAILURES=0
+TEST_UDP=0
+SKIP_CERT_VALID=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
@@ -226,7 +228,7 @@ test_L3() {
 
     # Check if we're running as a snap or not and change port accordingly.
     # If env variable SNAP exists, we're running as SNAP.
-    if [[ -n "${SNAP}" ]]; then
+    if [[ -n "${SNAP+x}" ]]; then
         verbose "Test Layer 3 for snapcraft.io"
         _url api.snapcraft.io
         _url canonical-lgw01.cdn.snapcraftcontent.com 
@@ -267,12 +269,12 @@ test_L4() {
     verbose "--------------------------"
     
     _nc_test_server_tcp_udp bootstrap
-    _nc_test_server_tcp_udp lwm2m
+    _nc_test_server_tcp_udp lwm2m	
 
     _nc edge-k8s"$DOMAIN_NAME_EDGE" 443
     _nc gateways"$DOMAIN_NAME_EDGE" 443
     _nc containers"$DOMAIN_NAME_EDGE" 443
-    if [[ -n "${SNAP}" ]]; then
+    if [[ -n "${SNAP+x}" ]]; then
         # https://snapcraft.io/docs/network-requirements
         _nc api.snapcraft.io 443
         _nc dashboard.snapcraft.io 443
@@ -318,7 +320,7 @@ main() {
         test_L3
     fi
 
-    busyboxnc=$(nc 2>&1)
+    busyboxnc=$(nc -help 2>&1) || true
     if [[ "$busyboxnc" =~ "BusyBox" ]]; then
         echo "BusyBox netcat detected, skipping Layer 4 tests"
     else
@@ -398,18 +400,23 @@ argprocessor() {
     
     # If neither --env or --domain arguments are provided
     # The ENV is set to production.
-    if [[ -z "$ENV" && -z "$DOMAIN_NAME" ]]; then
+    if [[ -z "${ENV+x}" && -z "${DOMAIN_NAME+x}" ]]; then
         echo "The env will be set to production."
         ENV="production"
-    elif [[ -n "$ENV" && -n "$DOMAIN_NAME" ]]; then
+    elif [[ -n "${ENV+x}" && -n "${DOMAIN_NAME+x}" ]]; then
         echo "Both --env or --domain argument were supplied."
         echo "Only one of them must be supplied"
         usage
         exit 1
     fi
+
+	# If the DOMAIN_NAME was supplied then it's a sandbox
+    if [[ -n "${DOMAIN_NAME+x}" ]]; then
+        DOMAIN_NAME_EDGE="$DOMAIN_NAME"
+    fi
     
     # Check if --env is integration/os2/production.
-    if [[ -n "$ENV" ]]; then
+    if [[ -n "${ENV+x}" ]]; then
         if [[ "$ENV" == "integration" ]]; then
             DOMAIN_NAME="-integration-lab.mbedcloudintegration.net"
             DOMAIN_NAME_EDGE=".mbedcloudintegration.net"
@@ -426,10 +433,6 @@ argprocessor() {
         fi
     fi
     
-    if [[ -n "$DOMAIN_NAME" ]]; then
-        DOMAIN_NAME_EDGE="$DOMAIN_NAME"
-    fi
-
     main "$@"    
 }
 argprocessor "$@"
