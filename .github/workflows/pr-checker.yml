@@ -18,7 +18,7 @@ jobs:
         run: shellcheck fw-tools/edge-testnet
       - name: Run edge-testnet
         run: | 
-          fw-tools/edge-testnet -e
+          SNAP=snap fw-tools/edge-testnet -e
       - run: shellcheck edge-info/edge-info
       - run: cat /etc/os-release
       - run: edge-info/edge-info
@@ -55,15 +55,6 @@ jobs:
       - run: echo "." >scripts-internal/.nopyshcheck
       - run: .github/workflows/pysh-checker.sh ${{ github.event.repository.default_branch }} ${{ github.ref_name }}
 
-  run-edge-testnet:
-    runs-on: [ "self-hosted", "client" ]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Run edge-testnet
-      run: fw-tools/edge-testnet
-    - name: Run edge-testnet as fake snap
-      run: SNAP=snap fw-tools/edge-testnet
-
   versions-check:
     runs-on: [ "self-hosted", "client" ]
     steps:
@@ -80,7 +71,7 @@ jobs:
         bin/misspell -i mosquitto
 
   run-edge-info:
-    runs-on: ubuntu-22.04
+    runs-on: [ "self-hosted", "client" ]
     steps:
     - uses: actions/checkout@v4
     - run: |
