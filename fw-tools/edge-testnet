@@ -9,6 +9,8 @@
 #   allows you to use port 443 as well.
 # - k8s and gateway service is available only via port 443.
 #
+set -e
+
 DEBUG=0
 FAILURES=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -383,8 +385,9 @@ argprocessor() {
             --domain) DOMAIN_NAME="$2"; shift 2 ;;
             #
             --) shift; break ;;
+            #
             *) >&2 echo Unsupported option: "$1"
-              usage ;;
+               usage ;;           
         esac
     done
     
@@ -393,7 +396,8 @@ argprocessor() {
         set -x
     fi
     
-    # Check if either --env or --domain arguments were provided
+    # If neither --env or --domain arguments are provided
+    # The ENV is set to production.
     if [[ -z "$ENV" && -z "$DOMAIN_NAME" ]]; then
         echo "The env will be set to production."
         ENV="production"
