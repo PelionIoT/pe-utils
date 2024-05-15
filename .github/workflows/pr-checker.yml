@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Install pyshcheck tooling
-      - run: sudo apt install pycodestyle pydocstyle black
+      - run: sudo apt install -y pycodestyle pydocstyle black
       # git instead of rules to use access token
       - run: git config --global url."https://${{ secrets.ACCESS_TOKEN }}@github.com/".insteadOf "git@github.com:"
       - run: git config --global url."https://${{ secrets.ACCESS_TOKEN }}@github".insteadOf "https://github"
