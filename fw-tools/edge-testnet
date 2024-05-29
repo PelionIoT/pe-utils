@@ -15,6 +15,7 @@ DEBUG=0
 FAILURES=0
 TEST_UDP=0
 SKIP_CERT_VALID=0
+G_SERVER_NAME=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
@@ -78,11 +79,12 @@ verbose() {
 #
 # Arguments (required)
 # - $1 - URL
-# - $2 - OUTPUT - the server name extracted from the URL
+# Result is passed back with the help of a global variable G_SERVER_NAME.
 extract_server_name() {
-    local URL="$1"
-    local -n OUTPUT="$2"
-    local RESULT=""
+    local URL
+    URL="$1"
+    local RESULT
+    RESULT=""
 
     if [[ $URL =~ ^(edge-k8s) ]]; then
         # If the URL starts with edge-k8s,
@@ -99,11 +101,14 @@ extract_server_name() {
         # In other cases,
         # Extract the substring from the beginning until the first dot or hyphen.        
         RESULT="${URL%%[.-]*}"
-    fi    
-
+    fi
+    if [[ -z "$RESULT" ]]; then
+        clihelp::failure "server name is empty"
+        exit 1
+    fi
     verbose "server name is $RESULT"
-    # shellcheck disable=SC2034
-    OUTPUT="$RESULT"
+    # Pass the result back via global variable
+    G_SERVER_NAME="$RESULT"
 }
 
 # test_server_with_openssl - test openssl connect with the URL
@@ -114,10 +119,10 @@ extract_server_name() {
 test_server_with_openssl() {
     local URL=$1
     local PORT=$2
-
     local SERVER_NAME=""
-    
-    extract_server_name "$URL" SERVER_NAME
+    # We get the G_SERVER_NAME passed back as a global variable
+    extract_server_name "$URL"
+    SERVER_NAME="${G_SERVER_NAME}"
     
     # The log file name must be without hyphen (bash scripts don't support variable names with hyphen)
     # The hypen is removed and "_log" is added.
