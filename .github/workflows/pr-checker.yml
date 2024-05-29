@@ -69,6 +69,12 @@ jobs:
           echo "Failed to run edge-testnet -h"
           exit 1
         fi
+    - name: Check if it works with a custom domain
+      run: |
+        if ! fw-tools/edge-testnet --domain pdm-sandbox.io; then
+          echo "Failed to run edge-testnet -d example.com"
+          exit 1
+        fi
 
   versions-check:
     runs-on: [ "self-hosted", "client" ]
