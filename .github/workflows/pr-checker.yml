@@ -63,6 +63,12 @@ jobs:
       run: fw-tools/edge-testnet
     - name: Run edge-testnet as fake snap
       run: SNAP=snap fw-tools/edge-testnet
+    - name: Check -h works OK.
+      run: |
+        if ! fw-tools/edge-testnet -h; then
+          echo "Failed to run edge-testnet -h"
+          exit 1
+        fi
 
   versions-check:
     runs-on: [ "self-hosted", "client" ]
