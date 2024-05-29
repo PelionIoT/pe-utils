@@ -14,7 +14,6 @@ set -eu
 DEBUG=0
 FAILURES=0
 TEST_UDP=0
-ENV=production
 SKIP_CERT_VALID=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
@@ -351,7 +350,7 @@ displayHelp() {
     echo "  -s skip cert validation in TLS tests"
     echo "  -h/-H show this help dialog"
     echo "  --domain  domain name"
-    echo "  --env environment. Can be integration/os2/production, default is $ENV"
+    echo "  --env environment. Can be integration/os2/production"
     echo "  if neither --domain or --env aren't supplied, the default is production env."
     echo "  --domain and --env can't be supplied together."
     exit
