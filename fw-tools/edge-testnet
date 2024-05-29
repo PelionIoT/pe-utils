@@ -14,6 +14,7 @@ set -eu
 DEBUG=0
 FAILURES=0
 TEST_UDP=0
+ENV=production
 SKIP_CERT_VALID=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
@@ -342,7 +343,7 @@ main() {
     fi
 }
 
-usage() {
+displayHelp() {
     echo "Usage: $0 -options"
     echo "  -d do not delete temporary storage"
     echo "  -v verbose output"
@@ -350,7 +351,7 @@ usage() {
     echo "  -s skip cert validation in TLS tests"
     echo "  -h/-H show this help dialog"
     echo "  --domain  domain name"
-    echo "  --env environment. Can be integration/os2/production"
+    echo "  --env environment. Can be integration/os2/production, default is $ENV"
     echo "  if neither --domain or --env aren't supplied, the default is production env."
     echo "  --domain and --env can't be supplied together."
     exit
@@ -358,7 +359,6 @@ usage() {
 
 argprocessor() {
     args=$(getopt -o hHdevs --l udp,env:,domain: -- "$@")
-    
     if [[ -z "$args" ]]; then
         usage
     fi
@@ -372,9 +372,11 @@ argprocessor() {
             #
             -e) DEBUG=1; shift ;;
             #
-            -h) displayHelp; shift ;;
+            -h) displayHelp
+                exit 0;;
             #
-            -H) displayHelp; shift ;;
+            -H) displayHelp
+                exit 0;;
             #
             -v) VERBOSE=1; shift ;;
             #
@@ -389,7 +391,8 @@ argprocessor() {
             --) shift; break ;;
             #
             *) >&2 echo Unsupported option: "$1"
-               usage ;;           
+              displayHelp
+              exit 1;;
         esac
     done
     
