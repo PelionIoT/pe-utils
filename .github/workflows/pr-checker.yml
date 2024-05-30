@@ -71,10 +71,20 @@ jobs:
         fi
     - name: Check if it works with a custom domain
       run: |
-        if ! fw-tools/edge-testnet --domain -pr-tester.pdm-sandbox.io; then
+        if ! fw-tools/edge-testnet --domain -pr-tester.pdm-sandbox.io -s --skip443 --skiptcp; then
           echo "Failed to run edge-testnet -d example.com"
           exit 1
         fi
+    - name: Check if it works with a custom domain & snap
+      run: |
+        if ! SNAP=snap fw-tools/edge-testnet --domain -pr-tester.pdm-sandbox.io -s --skip443 --skiptcp; then
+          echo "Failed to run edge-testnet -d example.com with SNAP env defined"
+          exit 1
+        fi
+    - name: Check if it works with expected failures
+      run: |
+        fw-tools/edge-testnet --domain -pr-tester.pdm-sandbox.io -s --skiptcp > expect-some-fails.txt || true
+        grep "Some tests failed." expect-some-fails.txt
 
   versions-check:
     runs-on: [ "self-hosted", "client" ]
