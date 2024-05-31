@@ -15,6 +15,7 @@ DEBUG=0
 FAILURES=0
 TEST_UDP=0
 SKIP_CERT_VALID=0
+G_SERVER_NAME=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CRED_DIR="$SCRIPT_DIR/credentials"
 temp=$(mktemp -d /tmp/IzumaNetTest-XXXXX)
@@ -36,6 +37,8 @@ L4T=$temp/layer4.txt
 
 VERBOSE=0
 DONTDELETE=0
+SKIPHTTPS=0
+SKIPTCP=0
 
 NORM="\u001b[0m"
 #BOLD="\u001b[1m"
@@ -78,11 +81,12 @@ verbose() {
 #
 # Arguments (required)
 # - $1 - URL
-# - $2 - OUTPUT - the server name extracted from the URL
+# Result is passed back with the help of a global variable G_SERVER_NAME.
 extract_server_name() {
-    local URL="$1"
-    local -n OUTPUT="$2"
-    local RESULT=""
+    local URL
+    URL="$1"
+    local RESULT
+    RESULT=""
 
     if [[ $URL =~ ^(edge-k8s) ]]; then
         # If the URL starts with edge-k8s,
@@ -99,11 +103,14 @@ extract_server_name() {
         # In other cases,
         # Extract the substring from the beginning until the first dot or hyphen.        
         RESULT="${URL%%[.-]*}"
-    fi    
-
+    fi
+    if [[ -z "$RESULT" ]]; then
+        clihelp::failure "server name is empty"
+        exit 1
+    fi
     verbose "server name is $RESULT"
-    # shellcheck disable=SC2034
-    OUTPUT="$RESULT"
+    # Pass the result back via global variable
+    G_SERVER_NAME="$RESULT"
 }
 
 # test_server_with_openssl - test openssl connect with the URL
@@ -114,10 +121,10 @@ extract_server_name() {
 test_server_with_openssl() {
     local URL=$1
     local PORT=$2
-
     local SERVER_NAME=""
-    
-    extract_server_name "$URL" SERVER_NAME
+    # We get the G_SERVER_NAME passed back as a global variable
+    extract_server_name "$URL"
+    SERVER_NAME="${G_SERVER_NAME}"
     
     # The log file name must be without hyphen (bash scripts don't support variable names with hyphen)
     # The hypen is removed and "_log" is added.
@@ -142,9 +149,9 @@ test_server_with_openssl() {
         
         COMMAND="openssl s_client -CAfile ${CRED_DIR}/${SERVER_NAME}.pem \
             -key ${CRED_DIR}/device01_key.pem -cert ${CRED_DIR}/device01_cert.pem \
-            -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1"
+            -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1" || true
     else 
-        COMMAND="openssl s_client -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1"
+        COMMAND="openssl s_client -connect ${URL}:${PORT} > ${LOG_FILE_NAME} 2>&1" || true
     fi
     
     # If the SKIP_CERT_VALID flag is off or the service is not bootstrap/lwm2m 
@@ -161,11 +168,11 @@ test_server_with_openssl() {
             return
         fi
     else
-        eval "$COMMAND"
+        eval "$COMMAND" || true
     fi
     
     # get openssl return code
-    RESULT=$(grep 'Verify return code' "$LOG_FILE_NAME")
+    RESULT=$(grep 'Verify return code' "$LOG_FILE_NAME") || true
     if [ -z "$RESULT" ]; then
         clihelp::failure "TLS to $URL server (port $PORT)"
         if [[ "$VERBOSE" -eq 1 ]]; then
@@ -214,7 +221,9 @@ test_L3() {
         local SERVER_NAME=$1
         
         _url "$SERVER_NAME""$DOMAIN_NAME"
-        _url tcp-"$SERVER_NAME""$DOMAIN_NAME"
+        if [[ "$SKIPTCP" -eq 0 ]]; then
+            _url tcp-"$SERVER_NAME""$DOMAIN_NAME"
+        fi
         if [[ "$TEST_UDP" -eq 1 ]]; then
             _url udp-"$SERVER_NAME""$DOMAIN_NAME"
         fi
@@ -253,7 +262,11 @@ test_L4() {
     
     _nc_test_server_tcp_udp() {
         local SERVER_NAME=$1
-        local PORTS=(5684 443)
+        if [[ "$SKIPHTTPS" -eq 1 ]]; then
+            local PORTS=(5684)
+        else
+            local PORTS=(5684 443)
+        fi
 
         for PORT in "${PORTS[@]}"; do
             _nc "$SERVER_NAME""$DOMAIN_NAME" "$PORT"
@@ -269,8 +282,11 @@ test_L4() {
     verbose "--------------------------"
     
     _nc_test_server_tcp_udp bootstrap
-    _nc_test_server_tcp_udp lwm2m	
+    _nc_test_server_tcp_udp lwm2m
 
+    if [[ "$SKIPHTTPS" -eq 1 ]]; then
+        return
+    fi
     _nc edge-k8s"$DOMAIN_NAME_EDGE" 443
     _nc gateways"$DOMAIN_NAME_EDGE" 443
     _nc containers"$DOMAIN_NAME_EDGE" 443
@@ -291,7 +307,11 @@ test_L4() {
 test_TLS() {
     _TLS_test_server_tcp_udp() {
         local SERVER_NAME=$1        
-        local PORTS=(5684 443)
+        if [[ "$SKIPHTTPS" -eq 1 ]]; then
+            local PORTS=(5684)
+        else
+            local PORTS=(5684 443)
+        fi
         
         for PORT in "${PORTS[@]}"; do
             test_server_with_openssl "$SERVER_NAME""$DOMAIN_NAME" "$PORT"
@@ -306,10 +326,11 @@ test_TLS() {
 
     _TLS_test_server_tcp_udp bootstrap
     _TLS_test_server_tcp_udp lwm2m
-    
-    test_server_with_openssl gateways"$DOMAIN_NAME_EDGE" 443
-    test_server_with_openssl edge-k8s"$DOMAIN_NAME_EDGE" 443
-    test_server_with_openssl containers"$DOMAIN_NAME_EDGE" 443   
+    if [[ "$SKIPHTTPS" -eq 0 ]]; then
+        test_server_with_openssl gateways"$DOMAIN_NAME_EDGE" 443
+        test_server_with_openssl edge-k8s"$DOMAIN_NAME_EDGE" 443
+        test_server_with_openssl containers"$DOMAIN_NAME_EDGE" 443
+    fi
 }
 
 main() {
@@ -342,23 +363,24 @@ main() {
     fi
 }
 
-usage() {
+displayHelp() {
     echo "Usage: $0 -options"
-    echo "  -d do not delete temporary storage"
-    echo "  -v verbose output"
-    echo "  -e debug"    
-    echo "  -s skip cert validation in TLS tests"
-    echo "  -h/-H show this help dialog"
-    echo "  --domain  domain name"
-    echo "  --env environment. Can be integration/os2/production"
+    echo "  -d         do not delete temporary storage"
+    echo "  -v         verbose output"
+    echo "  -e         debug"    
+    echo "  -s         skip cert validation in TLS tests"
+    echo "  --skip443  skip tests for port 443"
+    echo "  --skiptcp  skip testing tcp-bootstrap URL"
+    echo "  -h/-H      show this help dialog"
+    echo "  --domain   domain name"
+    echo "  --env      environment. Can be integration/os2/production"
     echo "  if neither --domain or --env aren't supplied, the default is production env."
     echo "  --domain and --env can't be supplied together."
     exit
 }
 
 argprocessor() {
-    args=$(getopt -o hHdevs --l udp,env:,domain: -- "$@")
-    
+    args=$(getopt -o hHdevs --l skip443,skiptcp,udp,env:,domain: -- "$@")
     if [[ -z "$args" ]]; then
         usage
     fi
@@ -372,9 +394,11 @@ argprocessor() {
             #
             -e) DEBUG=1; shift ;;
             #
-            -h) displayHelp; shift ;;
+            -h) displayHelp
+                exit 0;;
             #
-            -H) displayHelp; shift ;;
+            -H) displayHelp
+                exit 0;;
             #
             -v) VERBOSE=1; shift ;;
             #
@@ -386,10 +410,15 @@ argprocessor() {
             #
             --domain) DOMAIN_NAME="$2"; shift 2 ;;
             #
+            --skip443) SKIPHTTPS=1; shift 1;;
+            #
+            --skiptcp) SKIPTCP=1; shift 1;;
+            #
             --) shift; break ;;
             #
             *) >&2 echo Unsupported option: "$1"
-               usage ;;           
+              displayHelp
+              exit 1;;
         esac
     done
     
