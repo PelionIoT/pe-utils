@@ -1,6 +1,6 @@
 ## Izuma Edge utilities 2.3.6
 1. [fw-tools] - fix handling `-h` (help) option.
-1. [fw-tools] - support for custom domains (--domain) added, options to skip https/port443 check (--skip443) and tcp-bootstrap (--skiptcp).
+1. [fw-tools] - support for custom domains (`--domain`) added, options to skip https/port443 check (`--skip443`) and tcp-bootstrap ping (`--skiptcpping`).
 
 ## Izuma Edge utilities 2.3.5
 1. [fw-tools] - remove `ping` test from `serial-vault-partners.canonical.com`, it is not responding to `ping` anymore.
