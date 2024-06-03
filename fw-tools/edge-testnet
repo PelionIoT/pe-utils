@@ -38,7 +38,7 @@ L4T=$temp/layer4.txt
 VERBOSE=0
 DONTDELETE=0
 SKIPHTTPS=0
-SKIPTCP=0
+SKIPTCPPING=0
 
 NORM="\u001b[0m"
 #BOLD="\u001b[1m"
@@ -221,7 +221,7 @@ test_L3() {
         local SERVER_NAME=$1
         
         _url "$SERVER_NAME""$DOMAIN_NAME"
-        if [[ "$SKIPTCP" -eq 0 ]]; then
+        if [[ "$SKIPTCPPING" -eq 0 ]]; then
             _url tcp-"$SERVER_NAME""$DOMAIN_NAME"
         fi
         if [[ "$TEST_UDP" -eq 1 ]]; then
@@ -365,22 +365,22 @@ main() {
 
 displayHelp() {
     echo "Usage: $0 -options"
-    echo "  -d         do not delete temporary storage"
-    echo "  -v         verbose output"
-    echo "  -e         debug"    
-    echo "  -s         skip cert validation in TLS tests"
-    echo "  --skip443  skip tests for port 443"
-    echo "  --skiptcp  skip testing tcp-bootstrap URL"
-    echo "  -h/-H      show this help dialog"
-    echo "  --domain   domain name"
-    echo "  --env      environment. Can be integration/os2/production"
+    echo "  -d              do not delete temporary storage"
+    echo "  -v              verbose output"
+    echo "  -e              debug"    
+    echo "  -s              skip cert validation in TLS tests"
+    echo "  --skip443       skip tests for port 443"
+    echo "  --skiptcpping   skip testing tcp-bootstrap URL"
+    echo "  -h/-H           show this help dialog"
+    echo "  --domain        domain name"
+    echo "  --env           environment. Can be integration/os2/production"
     echo "  if neither --domain or --env aren't supplied, the default is production env."
     echo "  --domain and --env can't be supplied together."
     exit
 }
 
 argprocessor() {
-    args=$(getopt -o hHdevs --l skip443,skiptcp,udp,env:,domain: -- "$@")
+    args=$(getopt -o hHdevs --l skip443,skiptcpping,udp,env:,domain: -- "$@")
     if [[ -z "$args" ]]; then
         usage
     fi
@@ -412,7 +412,7 @@ argprocessor() {
             #
             --skip443) SKIPHTTPS=1; shift 1;;
             #
-            --skiptcp) SKIPTCP=1; shift 1;;
+            --skiptcpping) SKIPTCPPING=1; shift 1;;
             #
             --) shift; break ;;
             #
