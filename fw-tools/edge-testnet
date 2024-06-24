@@ -334,7 +334,7 @@ test_TLS() {
 }
 
 main() {
-    pinggoogle=$(ping -q -c 1 google.com 2>&1)
+    pinggoogle=$(ping -q -c 1 google.com 2>&1) || true
     if [[ "$pinggoogle" =~ "100% packet loss" ]]; then
         echo "ICMP traffic blocked, skipping L3 (ping) tests."
     else
