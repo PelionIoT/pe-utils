@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.7
+1. [fw-tools] - add `|| true` to 1st `ping` test to avoid abrupt script execution stop if `ping` errors.
+
 ## Izuma Edge utilities 2.3.6
 1. [fw-tools] - fix handling `-h` (help) option.
 1. [fw-tools] - support for custom domains (`--domain`) added, options to skip https/port443 check (`--skip443`) and tcp-bootstrap ping (`--skiptcpping`).
