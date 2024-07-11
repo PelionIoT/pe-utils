@@ -1,4 +1,4 @@
-name: PR-check
+name: edge-testnet-weekly
 run-name: ${{ github.actor }} edge-testnet-w-snap
 on:
   push:
