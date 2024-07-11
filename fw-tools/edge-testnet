@@ -75,7 +75,7 @@ verbose() {
 }
 
 # Extract the server name from the URL - bootstrap/lwm2m/edge-k8s/gateways/containers
-# If the URL starts with "edge-k8s", the server name will be from the begining until the second hyphen or the first dot.
+# If the URL starts with "edge-k8s", the server name will be from the beginning until the second hyphen or the first dot.
 # If the URL starts with "tcp-"/"udp-", the server name will come after "tcp-"/"udp-" until the first dot or hyphen
 # In other cases the server name will be from the beginning until the first dot or hyphen
 #
@@ -90,7 +90,7 @@ extract_server_name() {
 
     if [[ $URL =~ ^(edge-k8s) ]]; then
         # If the URL starts with edge-k8s,
-        # Extract the substring from the begining until the second hyphen
+        # Extract the substring from the beginning until the second hyphen
         # Or from the beginning until the first dot.
         # In practice it will be "edge-k8s".
         RESULT=$(echo "$URL" | grep -o '^[^-]*-[^-]*' | grep -o '^[^.]*')       
