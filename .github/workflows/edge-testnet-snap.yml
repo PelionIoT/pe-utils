@@ -1,0 +1,30 @@
+name: PR-check
+run-name: ${{ github.actor }} edge-testnet-w-snap
+on:
+  push:
+    paths:
+    - .github/workflows/edge-testnet-snap.yml
+  workflow_dispatch:
+  schedule:
+    # Once week 07:30 Sun
+    - cron: '30 7 * * Sun'
+
+# This allows a subsequently queued workflow run to interrupt previous runs
+concurrency:
+    group: edge-testnet-weekly-'${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+    cancel-in-progress: true
+jobs:
+    edge-testnet-weekly:
+      runs-on: [ "self-hosted" ]
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}      
+      steps:
+      - uses: actions/checkout@v4
+      - name: Run edge-testnet
+        run: SNAP=snap fw-tools/edge-testnet
+      - name: Post status to Slack test-infra channel
+        if: always()
+        uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          channel: '#test-infra'
