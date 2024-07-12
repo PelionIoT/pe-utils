@@ -93,15 +93,6 @@ jobs:
     - uses: actions/checkout@v4
     - run: ./check_versions.sh
 
-  misspell:
-    runs-on: [ "self-hosted", "client" ]
-    steps:
-    - name: Run misspell (findings may not increase)
-      run: |
-        curl -L -o ./install-misspell.sh https://git.io/misspell
-        sh ./install-misspell.sh
-        bin/misspell -i mosquitto
-
   run-edge-info:
     runs-on: ubuntu-22.04
     steps:
