@@ -44,15 +44,14 @@ jobs:
       PA_TOKEN: ${{ secrets.ACCESS_TOKEN }} # IzumaBOT Access Token
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: 'PelionIoT/scripts-internal'
+          token: ${{ secrets.ACCESS_TOKEN }}
+          path: 'scripts-internal'
       # Install pyshcheck tooling
       - run: sudo apt-get update && sudo apt-get install -y pycodestyle pydocstyle black
-      # git instead of rules to use access token
-      - run: git config --global url."https://${{ secrets.ACCESS_TOKEN }}@github.com/".insteadOf "git@github.com:"
-      - run: git config --global url."https://${{ secrets.ACCESS_TOKEN }}@github".insteadOf "https://github"
-      - run: git config --list
-      # Linux coreutils is already installed wc -command can be found.
-      - run: git clone git@github.com:PelionIoT/scripts-internal.git
-      #- run: git clone https://github.com/PelionIoT/scripts-internal.git
+      - run: tree
       - run: echo "." >scripts-internal/.nopyshcheck
       - run: .github/workflows/pysh-checker.sh ${{ github.event.repository.default_branch }} ${{ github.ref_name }}
 
