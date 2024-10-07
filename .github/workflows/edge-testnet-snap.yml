@@ -23,7 +23,7 @@ jobs:
       - name: Run edge-testnet
         run: SNAP=snap fw-tools/edge-testnet
       - name: Post status to Slack test-infra channel
-        if: always()
+        if: failure()
         uses: act10ns/slack@v2
         with:
           status: ${{ job.status }}
