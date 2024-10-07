@@ -439,7 +439,7 @@ argprocessor() {
         exit 1
     fi
 
-	# If the DOMAIN_NAME was supplied then it's a sandbox
+    # If the DOMAIN_NAME was supplied then it's a sandbox
     if [[ -n "${DOMAIN_NAME+x}" ]]; then
         DOMAIN_NAME_EDGE="$DOMAIN_NAME"
     fi
