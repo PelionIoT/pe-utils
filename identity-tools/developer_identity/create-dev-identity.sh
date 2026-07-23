@@ -63,6 +63,7 @@ cli_help() {
     -c <container_url>            containers api address (default: 'https://containers.us-east-1.mbedcloud.com')
     -g <gw_server_url>            gateway services api address (default: 'https://gateways.us-east-1.mbedcloud.com')
     -k <k8s_server_url>.          edge kubernetes server address (default: 'https://edge-k8s.us-east-1.mbedcloud.com')
+    -s <myriplane_server_addr>    myriplane (stargate) server address (default: 'myriplane.us-east-1.mbedcloud.com')
     -e <serial_number>            [optional] gateway serial number (default: autogenerate a random serial number)
     -n <account_id>               account identifier (mandatory)
     -o <output_directory>         output directory of identity.json (default: './')
@@ -116,12 +117,14 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             GW_URL="https://gateways.us-east-1.mbedcloud.com"
             k8s_URL="https://edge-k8s.us-east-1.mbedcloud.com"
             containers_URL="https://containers.us-east-1.mbedcloud.com"
+            MYRIPLANE_ADDR="https://myriplane.us-east-1.mbedcloud.com"
             ;;
         m)
             COMMON_ADDR="$OPTARG"
             GW_URL="https://gateways${COMMON_ADDR}"
             k8s_URL="https://edge-k8s${COMMON_ADDR}"
             containers_URL="https://containers${COMMON_ADDR}"
+            MYRIPLANE_ADDR="https://myriplane${COMMON_ADDR}"
             ;;
         c)
             containers_URL="$OPTARG"
@@ -131,6 +134,9 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             ;;
         k)
             k8s_URL="$OPTARG"
+            ;;
+        s)
+            MYRIPLANE_ADDR="$OPTARG"
             ;;
         e)
             SERIAL_NUMBER="$OPTARG"
@@ -188,6 +194,17 @@ DEV_SERIAL_NUMBER=$SERIAL_NUMBER_PREFIX$SN_POSTFIX
 
 [ -z $SERIAL_NUMBER ] && SERIAL_NUMBER=$DEV_SERIAL_NUMBER
 
+# Derive the myriplane (stargate) server address from the common address unless it
+# was explicitly provided via -s. For izuma.io the myriplane host is a fixed staging
+# address, otherwise it follows the myriplane.<common_addr> convention.
+if [ -z "$MYRIPLANE_ADDR" ]; then
+    if [ "$COMMON_ADDR" == ".izuma.io" ] || [ "$COMMON_ADDR" == "izuma.io" ]; then
+        MYRIPLANE_ADDR="https://stargate.staging.izuma.io"
+    else
+        MYRIPLANE_ADDR="https://myriplane${COMMON_ADDR}"
+    fi
+fi
+
 echo "{
     \"serialNumber\": \"$SERIAL_NUMBER\",
     \"OU\": \"$ACCOUNT_ID\",
@@ -216,7 +233,8 @@ echo "{
     ],
     \"gatewayServicesAddress\": \"$GW_URL\",
     \"edgek8sServicesAddress\": \"$k8s_URL\",
-    \"containerServicesAddress\": \"$containers_URL\"
+    \"containerServicesAddress\": \"$containers_URL\",
+    \"myriplaneServicesAddress\": \"$MYRIPLANE_ADDR\"
 }" > $OUTPUT_DIR/identity.json
 
 cli_debug "$(cat $OUTPUT_DIR/identity.json)"
