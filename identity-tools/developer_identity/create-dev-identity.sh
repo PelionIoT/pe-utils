@@ -117,14 +117,12 @@ while getopts 'hvVdm:c:g:s:k:e:n:o:i:w:r:l:z:' opt; do
             GW_URL="https://gateways.us-east-1.mbedcloud.com"
             k8s_URL="https://edge-k8s.us-east-1.mbedcloud.com"
             containers_URL="https://containers.us-east-1.mbedcloud.com"
-            MYRIPLANE_ADDR="https://myriplane.us-east-1.mbedcloud.com"
             ;;
         m)
             COMMON_ADDR="$OPTARG"
             GW_URL="https://gateways${COMMON_ADDR}"
             k8s_URL="https://edge-k8s${COMMON_ADDR}"
             containers_URL="https://containers${COMMON_ADDR}"
-            MYRIPLANE_ADDR="https://myriplane${COMMON_ADDR}"
             ;;
         c)
             containers_URL="$OPTARG"
