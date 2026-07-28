@@ -1,3 +1,6 @@
+## Izuma Edge utilities 2.3.10
+1. [identity-tools] - `create-dev-identity` now writes `stargateServicesAddress` to `identity.json`, and derives its default as `https://stargate.<common_addr>`. The `-s` option and the `.izuma.io` special case are unchanged.
+
 ## Izuma Edge utilities 2.3.7
 1. [fw-tools] - add `|| true` to 1st `ping` test to avoid abrupt script execution stop if `ping` errors.
 
